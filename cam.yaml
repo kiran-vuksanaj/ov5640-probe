@@ -13,11 +13,10 @@ cores:
       vs_lo_long: 1
       hsync: 1
       pclk_cam_in: 1
-      newframe: 1
 
     trigger_loc: 4000
     triggers:
-      - pclk_cam_in RISING
+      - hsync RISING
 
   # frame_buffer:
   #   type: block_memory

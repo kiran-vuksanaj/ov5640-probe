@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 23 Dec 2023 at 17:34:39 by kiranv
+This module was generated with Manta v0.0.5 on 23 Dec 2023 at 18:34:35 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -22,8 +22,7 @@ manta manta_inst (
     .cam_data_cb(cam_data_cb), 
     .vs_lo_long(vs_lo_long), 
     .hsync(hsync), 
-    .pclk_cam_in(pclk_cam_in), 
-    .newframe(newframe));
+    .pclk_cam_in(pclk_cam_in));
 
 */
 
@@ -39,8 +38,7 @@ module manta (
     input wire [15:0] cam_data_cb,
     input wire vs_lo_long,
     input wire hsync,
-    input wire pclk_cam_in,
-    input wire newframe);
+    input wire pclk_cam_in);
 
 
     uart_rx #(.CLOCKS_PER_BAUD(64)) urx (
@@ -84,7 +82,6 @@ module manta (
         .vs_lo_long(vs_lo_long),
         .hsync(hsync),
         .pclk_cam_in(pclk_cam_in),
-        .newframe(newframe),
     
         .addr_o(),
         .data_o(cam_logic_analyzer_btx_data),
@@ -336,7 +333,6 @@ module logic_analyzer (
     input wire vs_lo_long,
     input wire hsync,
     input wire pclk_cam_in,
-    input wire newframe,
 
     // input port
     input wire [15:0] addr_i,
@@ -366,9 +362,9 @@ module logic_analyzer (
     reg [ADDR_WIDTH-1:0] bram_addr;
     reg bram_we;
 
-    localparam TOTAL_PROBE_WIDTH = 30;
+    localparam TOTAL_PROBE_WIDTH = 29;
     reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {newframe, pclk_cam_in, hsync, vs_lo_long, cam_data_cb, cam_data_in, data_valid_cb, data_valid_cc};
+    assign probes_concat = {pclk_cam_in, hsync, vs_lo_long, cam_data_cb, cam_data_in, data_valid_cb, data_valid_cc};
 
     logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
         .clk(clk),
@@ -430,7 +426,6 @@ module logic_analyzer (
         .vs_lo_long(vs_lo_long),
         .hsync(hsync),
         .pclk_cam_in(pclk_cam_in),
-        .newframe(newframe),
 
         .trig(trig),
 
@@ -451,7 +446,7 @@ module logic_analyzer (
 
     // sample memory
     block_memory #(
-        .BASE_ADDR(23),
+        .BASE_ADDR(21),
         .WIDTH(TOTAL_PROBE_WIDTH),
         .DEPTH(SAMPLE_DEPTH)
         ) block_mem (
@@ -814,7 +809,6 @@ module trigger_block (
     input wire vs_lo_long,
     input wire hsync,
     input wire pclk_cam_in,
-    input wire newframe,
 
     // trigger
     output reg trig,
@@ -832,7 +826,7 @@ module trigger_block (
     output reg valid_o);
 
     parameter BASE_ADDR = 0;
-    localparam MAX_ADDR = 23;
+    localparam MAX_ADDR = 21;
 
     // trigger configuration registers
     // - each probe gets an operation and a compare register
@@ -915,19 +909,8 @@ module trigger_block (
         .op(pclk_cam_in_op),
         .arg(pclk_cam_in_arg),
         .trig(pclk_cam_in_trig));
-    reg [3:0] newframe_op = 0;
-    reg newframe_arg = 0;
-    reg newframe_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) newframe_trigger (
-        .clk(clk),
-    
-        .probe(newframe),
-        .op(newframe_op),
-        .arg(newframe_arg),
-        .trig(newframe_trig));
 
-   assign trig = data_valid_cc_trig || data_valid_cb_trig || cam_data_in_trig || cam_data_cb_trig || vs_lo_long_trig || hsync_trig || pclk_cam_in_trig || newframe_trig;
+   assign trig = data_valid_cc_trig || data_valid_cb_trig || cam_data_in_trig || cam_data_cb_trig || vs_lo_long_trig || hsync_trig || pclk_cam_in_trig;
 
     // perform register operations
     always @(posedge clk) begin
@@ -955,8 +938,6 @@ module trigger_block (
                     BASE_ADDR + 11: data_o <= hsync_arg;
                     BASE_ADDR + 12: data_o <= pclk_cam_in_op;
                     BASE_ADDR + 13: data_o <= pclk_cam_in_arg;
-                    BASE_ADDR + 14: data_o <= newframe_op;
-                    BASE_ADDR + 15: data_o <= newframe_arg;
                 endcase
             end
 
@@ -977,8 +958,6 @@ module trigger_block (
                     BASE_ADDR + 11: hsync_arg <= data_i;
                     BASE_ADDR + 12: pclk_cam_in_op <= data_i;
                     BASE_ADDR + 13: pclk_cam_in_arg <= data_i;
-                    BASE_ADDR + 14: newframe_op <= data_i;
-                    BASE_ADDR + 15: newframe_arg <= data_i;
                 endcase
             end
         end

@@ -65,8 +65,6 @@ module top_level
       pmodb_buf <= pmodb;
    end
 
-   logic newframe;
-      
    camera_bare cbm
      (.clk_pixel_in(clk_camera),
       .pclk_cam_in(pmodb_buf[0] ),
@@ -77,8 +75,7 @@ module top_level
       .hs_cam_out(hsync_raw),
       .vs_cam_out(vsync_raw),
       .data_out(data),
-      .valid_out(valid_pixel),
-      .newframe_out(newframe)
+      .valid_out(valid_pixel)
       );
    assign hsync = sw[0] ^ hsync_raw; // if sw[0], invert hsync
    assign vsync = sw[1] ^ vsync_raw; // if sw[1], invert vsync
@@ -258,8 +255,7 @@ module top_level
       // .cam_data_cc(pixel_cc),
       .vs_lo_long(vs_lo_long),
       .hsync(hsync),
-      .pclk_cam_in(pmodb_buf[0]),
-      .newframe(newframe)
+      .pclk_cam_in(pmodb_buf[0])
       // fb BRAM
       // .frame_buffer_clk(clk_camera),
       // .frame_buffer_addr(fb_addr),

@@ -1,0 +1,30 @@
+---
+cores:
+
+  cam_logic_analyzer:
+    type: logic_analyzer
+    sample_depth: 16384
+    probes:
+      data_valid_cc: 1
+      data_valid_cb: 1
+      cam_data_in: 8
+      cam_data_cb: 16
+      # cam_data_cc: 16
+      vs_lo_long: 1
+      hsync: 1
+      pclk_cam_in: 1
+      newframe: 1
+
+    trigger_loc: 4000
+    triggers:
+      - pclk_cam_in RISING
+
+  # frame_buffer:
+  #   type: block_memory
+  #   width: 16
+  #   depth: 15360
+
+uart:
+  port: "/dev/ttyUSB1"
+  baudrate: 3000000
+  clock_freq: 192000000

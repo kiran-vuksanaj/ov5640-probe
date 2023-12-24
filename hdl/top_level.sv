@@ -98,7 +98,6 @@ module top_level
       .vcount_out(vcount_cc)
       );
 
-
    assign fb_addr = vcount_cc*120 + hcount_cc;
    assign fb_we = valid_cc && vcount_cc < 128 && hcount_cc < 100;
    assign fb_din = pixel_cc;

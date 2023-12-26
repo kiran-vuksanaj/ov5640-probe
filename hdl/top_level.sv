@@ -12,12 +12,18 @@ module top_level
    input wire [3:0]    btn,
    output logic [2:0]  rgb0,
    output logic [2:0]  rgb1,
+   // seven segment
    output logic [3:0]  ss0_an,//anode control for upper four digits of seven-seg display
    output logic [3:0]  ss1_an,//anode control for lower four digits of seven-seg display
    output logic [6:0]  ss0_c, //cathode controls for the segments of upper four digits
    output logic [6:0]  ss1_c, //cathod controls for the segments of lower four digits
+   // uart for manta
    input wire 	       uart_rxd,
-   output logic        uart_txd
+   output logic        uart_txd,
+   // hdmi port
+   output logic [2:0]  hdmi_tx_p, //hdmi output signals (positives) (blue, green, red)
+   output logic [2:0]  hdmi_tx_n, //hdmi output signals (negatives) (blue, green, red)
+   output logic        hdmi_clk_p, hdmi_clk_n //differential hdmi clock
    );
    logic 	       sys_rst;
    assign sys_rst = btn;
@@ -25,30 +31,35 @@ module top_level
    assign rgb1 = 0;
 
    logic 	       clk_camera;
-
-   // xc_pc_clk_wiz wizard
+   logic 	       clk_pixel;
+   logic 	       clk_5x;
+   
+   // very_fast_clk_wiz wizard
    //   (.clk_in1(clk_100mhz),
-   //    .clk_xc(pmodb_xc),
-   //    .clk_rd(clk_camera),
+   //    .clk_out1(clk_camera),
    //    .reset(0)
    //    );
-   very_fast_clk_wiz wizard
+   hdmi_mig_clk_wiz wizard
      (.clk_in1(clk_100mhz),
-      .clk_out1(clk_camera),
+      .clk_sysref(clk_camera),
+      .clk_pixel(clk_pixel),
+      .clk_tmds(clk_5x),
       .reset(0)
       );
    
+   // ------------------- REGISTER DECLARATIONS
    
    // manta BRAM
    logic 	       fb_we;
    logic [15:0]        fb_dout;
    logic [15:0]        fb_din;
    logic [$clog2(15360)-1:0] fb_addr;
-   
 
-   logic [7:0]        count_frames;
+   // seven segment
    logic [31:0]        ssc_display;
-   
+
+
+   // camera_bare
    logic 	       hsync_raw;
    logic 	       hsync;
    logic 	       vsync_raw;
@@ -58,14 +69,29 @@ module top_level
    logic 	       valid_pixel;
    logic 	       valid_byte;
       
-
-   logic 	       pclk_prev;
-
+   // buffering
    logic [2:0] 	       pmodb_buf0;
    logic [7:0] 	       pmoda_buf0;
    
    logic [2:0] 	       pmodb_buf; // buffer, to make sure values only update on our clock domain!p
    logic [7:0] 	       pmoda_buf;
+
+   // HDMI output wires
+
+   // video signal generator
+   logic 	       hsync_hdmi;
+   logic 	       vsync_hdmi;
+   logic [10:0]        hcount_hdmi;
+   logic [9:0] 	       vcount_hdmi;
+   logic 	       active_draw_hdmi;
+   logic 	       new_frame_hdmi;
+   logic [5:0] 	       frame_count_hdmi;
+
+   // rgb output values
+   logic [7:0] 	       red,green,blue;
+
+
+   // ------------------------ CAMERA CAPTURE ----------------------------
    always_ff @(posedge clk_camera) begin
       pmoda_buf0 <= pmoda;
       pmodb_buf0 <= pmodb;
@@ -109,6 +135,10 @@ module top_level
       .hcount_out(hcount_cc),
       .vcount_out(vcount_cc)
       );
+
+
+   // ----------------------- SEVEN SEGMENT PROBE -------------------
+   
    // for the sake of syncing all potentially-used signals:
    logic 	hsync_cc;
    logic 	vsync_cc;
@@ -215,7 +245,99 @@ module top_level
       .an_out({ss0_an,ss1_an}));
    assign ss0_c = ss_c;
    assign ss1_c = ss_c;
+   
 
+   // -------------------------- HDMI OUTPUT --------------------------
+   
+   logic [9:0] tmds_10b [0:2]; //output of each TMDS encoder!
+   logic       tmds_signal [2:0]; //output of each TMDS serializer!
+   
+   
+   // for now:
+   assign red = 8'hFF;
+   assign green = 8'h77;
+   assign blue = 8'hAA;
+
+   // video signal generator
+   video_sig_gen vsg
+     (
+      .clk_pixel_in(clk_pixel),
+      .rst_in(sys_rst),
+      .hcount_out(hcount_hdmi),
+      .vcount_out(vcount_hdmi),
+      .vs_out(vsync_hdmi),
+      .hs_out(hsync_hdmi),
+      .ad_out(active_draw_hdmi),
+      .fc_out(frame_count_hdmi)
+      );
+   
+   
+      
+   //three tmds_encoders (blue, green, red)
+   //note green should have no control signal like red
+   //the blue channel DOES carry the two sync signals:
+   //  * control_in[0] = horizontal sync signal
+   //  * control_in[1] = vertical sync signal
+
+   tmds_encoder tmds_red(
+			 .clk_in(clk_pixel),
+			 .rst_in(sys_rst),
+			 .data_in(red),
+			 .control_in(2'b0),
+			 .ve_in(active_draw_hdmi),
+			 .tmds_out(tmds_10b[2]));
+
+   tmds_encoder tmds_green(
+			   .clk_in(clk_pixel),
+			   .rst_in(sys_rst),
+			   .data_in(green),
+			   .control_in(2'b0),
+			   .ve_in(active_draw_hdmi),
+			   .tmds_out(tmds_10b[1]));
+
+   tmds_encoder tmds_blue(
+			  .clk_in(clk_pixel),
+			  .rst_in(sys_rst),
+			  .data_in(blue),
+			  .control_in({vsync_hdmi,hsync_hdmi}),
+			  .ve_in(active_draw_hdmi),
+			  .tmds_out(tmds_10b[0]));
+   
+   
+   //three tmds_serializers (blue, green, red):
+   //MISSING: two more serializers for the green and blue tmds signals.
+   tmds_serializer red_ser(
+			   .clk_pixel_in(clk_pixel),
+			   .clk_5x_in(clk_5x),
+			   .rst_in(sys_rst),
+			   .tmds_in(tmds_10b[2]),
+			   .tmds_out(tmds_signal[2]));
+   tmds_serializer green_ser(
+			   .clk_pixel_in(clk_pixel),
+			   .clk_5x_in(clk_5x),
+			   .rst_in(sys_rst),
+			   .tmds_in(tmds_10b[1]),
+			   .tmds_out(tmds_signal[1]));
+   tmds_serializer blue_ser(
+			   .clk_pixel_in(clk_pixel),
+			   .clk_5x_in(clk_5x),
+			   .rst_in(sys_rst),
+			   .tmds_in(tmds_10b[0]),
+			   .tmds_out(tmds_signal[0]));
+   
+   //output buffers generating differential signals:
+   //three for the r,g,b signals and one that is at the pixel clock rate
+   //the HDMI receivers use recover logic coupled with the control signals asserted
+   //during blanking and sync periods to synchronize their faster bit clocks off
+   //of the slower pixel clock (so they can recover a clock of about 742.5 MHz from
+   //the slower 74.25 MHz clock)
+   OBUFDS OBUFDS_blue (.I(tmds_signal[0]), .O(hdmi_tx_p[0]), .OB(hdmi_tx_n[0]));
+   OBUFDS OBUFDS_green(.I(tmds_signal[1]), .O(hdmi_tx_p[1]), .OB(hdmi_tx_n[1]));
+   OBUFDS OBUFDS_red  (.I(tmds_signal[2]), .O(hdmi_tx_p[2]), .OB(hdmi_tx_n[2]));
+   OBUFDS OBUFDS_clock(.I(clk_pixel), .O(hdmi_clk_p), .OB(hdmi_clk_n));
+   
+
+   // -------------------------- MANTA PROBE ---------------------------
 
    // manta connection
    manta manta_inst

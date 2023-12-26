@@ -12,7 +12,8 @@ module camera_bare
    output logic        hs_cam_out,
    output logic        vs_cam_out,
    output logic [15:0] data_out,
-   output logic        valid_out
+   output logic        valid_out,
+   output logic        valid_byte
    );
    logic 	       pclk_prev;
    logic 	       vsync_prev;
@@ -32,6 +33,7 @@ module camera_bare
 	 real_pixel_prev <= 1'b0;
 	 new_row <= 0;
 	 vsync_prev <= 0;
+	 valid_byte <= 1'b0;
       end else begin
 	 if (clk_rise) begin
 	    hs_cam_out <= hs_cam_in;
@@ -48,9 +50,10 @@ module camera_bare
 	    new_row <= (~real_pixel_prev && real_pixel);
 	    vsync_prev <= vs_cam_in;
 	    real_pixel_prev <= real_pixel;
-	 end else begin
+	 end else begin // if (clk_rise)
 	    valid_out <= 1'b0;
-	 end
+	 end // else: !if(clk_rise)
+	 valid_byte <= clk_rise;
       end // else: !if(rst_in)
       pclk_prev <= pclk_cam_in;
    end

@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 23 Dec 2023 at 18:55:53 by kiranv
+This module was generated with Manta v0.0.5 on 24 Dec 2023 at 19:59:34 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -20,7 +20,7 @@ manta manta_inst (
     .data_valid_cb(data_valid_cb), 
     .cam_data_in(cam_data_in), 
     .cam_data_cb(cam_data_cb), 
-    .vs_lo_long(vs_lo_long), 
+    .vsync(vsync), 
     .hsync(hsync), 
     .pclk_cam_in(pclk_cam_in));
 
@@ -36,7 +36,7 @@ module manta (
     input wire data_valid_cb,
     input wire [7:0] cam_data_in,
     input wire [15:0] cam_data_cb,
-    input wire vs_lo_long,
+    input wire vsync,
     input wire hsync,
     input wire pclk_cam_in);
 
@@ -79,7 +79,7 @@ module manta (
         .data_valid_cb(data_valid_cb),
         .cam_data_in(cam_data_in),
         .cam_data_cb(cam_data_cb),
-        .vs_lo_long(vs_lo_long),
+        .vsync(vsync),
         .hsync(hsync),
         .pclk_cam_in(pclk_cam_in),
     
@@ -330,7 +330,7 @@ module logic_analyzer (
     input wire data_valid_cb,
     input wire [7:0] cam_data_in,
     input wire [15:0] cam_data_cb,
-    input wire vs_lo_long,
+    input wire vsync,
     input wire hsync,
     input wire pclk_cam_in,
 
@@ -364,7 +364,7 @@ module logic_analyzer (
 
     localparam TOTAL_PROBE_WIDTH = 29;
     reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {pclk_cam_in, hsync, vs_lo_long, cam_data_cb, cam_data_in, data_valid_cb, data_valid_cc};
+    assign probes_concat = {pclk_cam_in, hsync, vsync, cam_data_cb, cam_data_in, data_valid_cb, data_valid_cc};
 
     logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
         .clk(clk),
@@ -423,7 +423,7 @@ module logic_analyzer (
         .data_valid_cb(data_valid_cb),
         .cam_data_in(cam_data_in),
         .cam_data_cb(cam_data_cb),
-        .vs_lo_long(vs_lo_long),
+        .vsync(vsync),
         .hsync(hsync),
         .pclk_cam_in(pclk_cam_in),
 
@@ -806,7 +806,7 @@ module trigger_block (
     input wire data_valid_cb,
     input wire [7:0] cam_data_in,
     input wire [15:0] cam_data_cb,
-    input wire vs_lo_long,
+    input wire vsync,
     input wire hsync,
     input wire pclk_cam_in,
 
@@ -876,17 +876,17 @@ module trigger_block (
         .op(cam_data_cb_op),
         .arg(cam_data_cb_arg),
         .trig(cam_data_cb_trig));
-    reg [3:0] vs_lo_long_op = 0;
-    reg vs_lo_long_arg = 0;
-    reg vs_lo_long_trig;
+    reg [3:0] vsync_op = 0;
+    reg vsync_arg = 0;
+    reg vsync_trig;
     
-    trigger #(.INPUT_WIDTH(1)) vs_lo_long_trigger (
+    trigger #(.INPUT_WIDTH(1)) vsync_trigger (
         .clk(clk),
     
-        .probe(vs_lo_long),
-        .op(vs_lo_long_op),
-        .arg(vs_lo_long_arg),
-        .trig(vs_lo_long_trig));
+        .probe(vsync),
+        .op(vsync_op),
+        .arg(vsync_arg),
+        .trig(vsync_trig));
     reg [3:0] hsync_op = 0;
     reg hsync_arg = 0;
     reg hsync_trig;
@@ -910,7 +910,7 @@ module trigger_block (
         .arg(pclk_cam_in_arg),
         .trig(pclk_cam_in_trig));
 
-   assign trig = data_valid_cc_trig || data_valid_cb_trig || cam_data_in_trig || cam_data_cb_trig || vs_lo_long_trig || hsync_trig || pclk_cam_in_trig;
+   assign trig = data_valid_cc_trig || data_valid_cb_trig || cam_data_in_trig || cam_data_cb_trig || vsync_trig || hsync_trig || pclk_cam_in_trig;
 
     // perform register operations
     always @(posedge clk) begin
@@ -932,8 +932,8 @@ module trigger_block (
                     BASE_ADDR + 5: data_o <= cam_data_in_arg;
                     BASE_ADDR + 6: data_o <= cam_data_cb_op;
                     BASE_ADDR + 7: data_o <= cam_data_cb_arg;
-                    BASE_ADDR + 8: data_o <= vs_lo_long_op;
-                    BASE_ADDR + 9: data_o <= vs_lo_long_arg;
+                    BASE_ADDR + 8: data_o <= vsync_op;
+                    BASE_ADDR + 9: data_o <= vsync_arg;
                     BASE_ADDR + 10: data_o <= hsync_op;
                     BASE_ADDR + 11: data_o <= hsync_arg;
                     BASE_ADDR + 12: data_o <= pclk_cam_in_op;
@@ -952,8 +952,8 @@ module trigger_block (
                     BASE_ADDR + 5: cam_data_in_arg <= data_i;
                     BASE_ADDR + 6: cam_data_cb_op <= data_i;
                     BASE_ADDR + 7: cam_data_cb_arg <= data_i;
-                    BASE_ADDR + 8: vs_lo_long_op <= data_i;
-                    BASE_ADDR + 9: vs_lo_long_arg <= data_i;
+                    BASE_ADDR + 8: vsync_op <= data_i;
+                    BASE_ADDR + 9: vsync_arg <= data_i;
                     BASE_ADDR + 10: hsync_op <= data_i;
                     BASE_ADDR + 11: hsync_arg <= data_i;
                     BASE_ADDR + 12: pclk_cam_in_op <= data_i;

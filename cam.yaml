@@ -10,13 +10,13 @@ cores:
       cam_data_in: 8
       cam_data_cb: 16
       # cam_data_cc: 16
-      vs_lo_long: 1
+      vsync: 1
       hsync: 1
       pclk_cam_in: 1
 
-    trigger_loc: 4000
+    trigger_loc: 20
     triggers:
-      - hsync RISING
+      - hsync FALLING
 
   # frame_buffer:
   #   type: block_memory
@@ -26,4 +26,5 @@ cores:
 uart:
   port: "/dev/ttyUSB1"
   baudrate: 3000000
-  clock_freq: 192000000
+  # clock_freq: 192000000
+  clock_freq: 307200000

@@ -8,7 +8,6 @@ module top_level
    input wire [7:0]    pmoda,
    input wire [2:0]    pmodb,
    input wire [15:0]   sw,
-   output logic        pmodb_xc,
    input wire [3:0]    btn,
    output logic [2:0]  rgb0,
    output logic [2:0]  rgb1,
@@ -23,8 +22,24 @@ module top_level
    // hdmi port
    output logic [2:0]  hdmi_tx_p, //hdmi output signals (positives) (blue, green, red)
    output logic [2:0]  hdmi_tx_n, //hdmi output signals (negatives) (blue, green, red)
-   output logic        hdmi_clk_p, hdmi_clk_n //differential hdmi clock
+   output logic        hdmi_clk_p, hdmi_clk_n, //differential hdmi clock
+   // DDR3 ports
+   inout wire [15:0]   ddr3_dq,
+   inout wire [1:0]    ddr3_dqs_n,
+   inout wire [1:0]    ddr3_dqs_p,
+   output wire [12:0]  ddr3_addr,
+   output wire [2:0]   ddr3_ba,
+   output wire 	       ddr3_ras_n,
+   output wire 	       ddr3_cas_n,
+   output wire 	       ddr3_we_n,
+   output wire 	       ddr3_reset_n,
+   output wire 	       ddr3_ck_p,
+   output wire 	       ddr3_ck_n,
+   output wire 	       ddr3_cke,
+   output wire [1:0]   ddr3_dm,
+   output wire 	       ddr3_odt
    );
+   
    logic 	       sys_rst;
    assign sys_rst = btn;
    assign rgb0 = 0;
@@ -47,7 +62,7 @@ module top_level
       .reset(0)
       );
    
-   // ------------------- REGISTER DECLARATIONS
+   // ================== CHAPTER: REGISTER DECLARATIONS ================
    
    // manta BRAM
    logic 	       fb_we;
@@ -90,8 +105,33 @@ module top_level
    // rgb output values
    logic [7:0] 	       red,green,blue;
 
+   // mig module
+   // user interface signals
+   logic [26:0]        app_addr;
+   logic [2:0] 	       app_cmd;
+   logic 	       app_en;
+   logic [127:0]       app_wdf_data;
+   logic 	       app_wdf_end;
+   logic 	       app_wdf_wren;
+   logic [127:0]       app_rd_data;
+   logic 	       app_rd_data_end;
+   logic 	       app_rd_data_valid;
+   logic 	       app_rdy;
+   logic 	       app_wdf_rdy;
+   logic 	       app_sr_req;
+   logic 	       app_ref_req;
+   logic 	       app_zq_req;
+   logic 	       app_sr_active;
+   logic 	       app_ref_ack;
+   logic 	       app_zq_ack;
+   logic 	       ui_clk;
+   logic 	       ui_clk_sync_rst;
+   logic [15:0]        app_wdf_mask;
+   logic 	       init_calib_complete;
+   logic [11:0]        device_temp;
 
-   // ------------------------ CAMERA CAPTURE ----------------------------
+
+   // ==================== CHAPTER: CAMERA CAPTURE =======================
    always_ff @(posedge clk_camera) begin
       pmoda_buf0 <= pmoda;
       pmodb_buf0 <= pmodb;
@@ -136,8 +176,29 @@ module top_level
       .vcount_out(vcount_cc)
       );
 
+   // pass pixels into the phrase builder
+   // ignore the ready signal! if its not ready, data will just be missed.
+   // nothing else can be done since this is just coming at the rate of the camera
+   logic 	phrase_axis_valid;
+   logic 	phrase_axis_ready;
+   logic [127:0] phrase_axis_data;
 
-   // ----------------------- SEVEN SEGMENT PROBE -------------------
+   logic [2:0] 	 offset;
+   
+   build_wr_data
+     (.clk_in(clk_camera),
+      .rst_in(sys_rst),
+      .valid_in(valid_cc),
+      .ready_in(), // discard
+      .data_in(pixel_cc),
+      .valid_out(phrase_axis_valid),
+      .ready_out(phrase_axis_ready),
+      .offset(offset),
+      .data_out(phrase_axis_data)
+      );
+
+
+   // ======================= CHAPTER : SEVEN SEGMENT PROBE ======================
    
    // for the sake of syncing all potentially-used signals:
    logic 	hsync_cc;
@@ -245,9 +306,389 @@ module top_level
       .an_out({ss0_an,ss1_an}));
    assign ss0_c = ss_c;
    assign ss1_c = ss_c;
+
+   // =============== CHAPTER: MEMORY MIG STUFF ====================
+
+   logic       write_axis_valid;
+   logic       write_axis_ready;
+   logic [127:0] write_axis_phrase;
+
+   logic 	 small_pile;
+
+   ddr_fifo camera_write
+     (.s_axis_aresetn(~sys_rst), // active low
+      .s_axis_aclk(clk_camera),
+      .s_axis_tvalid(phrase_axis_valid),
+      .s_axis_tready(phrase_axis_ready),
+      .s_axis_tdata(phrase_axis_data),
+      .m_axis_aclk(ui_clk),
+      .m_axis_tvalid(write_axis_valid),
+      .m_axis_tready(write_axis_ready), // ready will spit you data! use in proper state
+      .m_axis_tdata(write_axis_phrase),
+      .prog_empty(small_pile));
+
+   // assign write_axis_ready = 1;
+   // always_ff @(posedge ui_clk) begin
+   //    if (sys_rst) begin
+   // 	 led[15:12] <= 0;
+   //    end
+   //    led[15] <= led[15] || write_axis_valid;
+   //    led[14] <= led[14] || phrase_axis_valid;
+   //    led[13] <= led[13] || phrase_axis_ready;
+   //    led[12] <= led[12] || valid_cc;
+   //    led[11:4] <= phrase_axis_data[39:32];
+   // end
    
 
-   // -------------------------- HDMI OUTPUT --------------------------
+   // MIG state machine for prime numbers. just to make sure DDR3 is alive
+  // logic [31:0] state;
+  // logic [31:0] cycle_counter;
+  // logic [31:0] num_to_write;
+  // logic [31:0] num_to_read;
+  // logic [31:0] latency_counter;
+  // logic [31:0] val_to_display;
+  
+  // logic [15:0] sw_intermediate;
+  // logic [15:0] sw_sync;
+  //  logic       clk_200;
+  //  assign clk_200 = clk_camera;
+  //  localparam NUM_MAX = 10000;
+   
+   
+   // always_ff @(posedge ui_clk) begin // handle asynchronous switch toggles
+   //    sw_intermediate <= sw;
+   //    sw_sync <= sw_intermediate;
+   // end
+   
+   // assign led[0] = 1'b1;
+   assign led[2] = init_calib_complete; // og led[1]
+   // assign led[3] = cycle_counter[28]; // og led[2]
+
+   traffic_generator tg
+     (.clk_in(ui_clk),
+      .rst_in(sys_rst),
+      .app_addr(app_addr),
+      .app_cmd(app_cmd),
+      .app_en(app_en),
+      .app_wdf_data(app_wdf_data),
+      .app_wdf_end(app_wdf_end),
+      .app_wdf_wren(app_wdf_wren),
+      .app_wdf_mask(app_wdf_mask),
+      .app_rd_data(app_rd_data),
+      .app_rd_data_valid(app_rd_data_valid),
+      .app_rdy(app_rdy),
+      .app_wdf_rdy(app_wdf_rdy),
+      .app_sr_req(app_sr_req),
+      .app_ref_req(app_ref_req),
+      .app_zq_req(app_zq_req),
+      .app_sr_active(app_sr_active),
+      .app_ref_ack(app_ref_ack),
+      .app_zq_ack(app_zq_ack),
+      .init_calib_complete(init_calib_complete),
+      .write_axis_data(write_axis_phrase),
+      .write_axis_valid(write_axis_valid),
+      .write_axis_ready(write_axis_ready),
+      .write_axis_smallpile(small_pile),
+      .state_out(led[13:11]),
+      .trigger_btn_sync(btn[1])
+      );
+   assign led[5:4] = app_addr[1:0];
+   assign led[7] = app_rdy;
+   assign led[8] = app_en;
+   assign led[9] = app_wdf_rdy;
+   assign led[10] = app_wdf_wren;
+   assign led[14] = small_pile;
+   assign led[15] = write_axis_ready;
+   assign led[6] = phrase_axis_ready;
+   
+   
+   
+   
+  // assign led[3] = app_rdy;
+  // assign led[15:4] = device_temp;
+
+  // logic btn0_deb;
+  // debouncer btn0_db (
+  //   .clk_in(clk_200),
+  //   .rst_in(btn[1]), // button 0 resets the system, button 1 resets the debouncer.
+  //   .dirty_in(btn[0]),
+  //   .clean_out(btn0_deb)
+  // );
+  // logic sys_rst_200, sys_rst_200_0, sys_rst_200_1;
+  // always_ff @(posedge clk_200) begin
+  //   sys_rst_200_0 <= btn0_deb;
+  //   sys_rst_200_1 <= sys_rst_200_0;
+  //   sys_rst_200 <= sys_rst_200_1;
+  // end
+
+  // always_ff @(posedge ui_clk) begin
+  //   if (ui_clk_sync_rst) begin
+  //     cycle_counter <= 0;
+  //   end else begin
+  //     cycle_counter <= cycle_counter + 1;
+  //   end
+  // end
+  
+  // // Made by Andrew Weinfeld, andrewj31415@gmail.com
+  // always_ff @(posedge ui_clk) begin
+  //   if (ui_clk_sync_rst) begin
+  //     state <= 0;
+  //   end else begin
+  //     if (state == 0) begin
+  //       state <= 1;
+  //     end else if (state == 1) begin
+  //       state <= 2;
+  //       num_to_write <= 2;
+  //     end else if (state == 2) begin
+  //       if (app_wdf_rdy) begin
+  //         state <= 3;
+  //       end
+  //     end else if (state == 3) begin
+  //       if (app_rdy) begin
+  //         if (num_to_write < NUM_MAX) begin
+  //           state <= 2;
+  //           num_to_write <= num_to_write + 1;
+  //         end else begin
+  //           state <= 4;
+  //           num_to_read <= 2;
+  //         end
+  //       end
+  //     end else if (state == 4) begin
+  //       if (app_rdy) begin
+  //         state <= 5;
+  //       end
+  //     end else if (state == 5) begin
+  //       if (app_rd_data_valid) begin
+  //         if (app_rd_data == 0) begin // not prime
+  //           state <= 4;
+  //           num_to_read <= num_to_read + 1;
+  //         end else begin // prime!
+  //           state <= 6;
+  //           num_to_write <= num_to_read * 2;
+  //         end
+  //       end
+  //     end else if (state == 6) begin
+  //       if (app_wdf_rdy) begin
+  //         state <= 7;
+  //       end
+  //     end else if (state == 7) begin
+  //       if (app_rdy) begin
+  //         if (num_to_write < NUM_MAX) begin
+  //           num_to_write <= num_to_write + num_to_read;
+  //           state <= 6;
+  //         end else if (num_to_read < NUM_MAX) begin
+  //           state <= 4;
+  //           num_to_read <= num_to_read + 1;
+  //         end else begin
+  //           state <= 8;
+  //           num_to_read <= 1;
+  //         end
+  //       end
+  //     end else if (state == 8) begin
+  //       if ((cycle_counter[23:0] == 0) && !sw_sync[0]) begin
+  //         state <= 9;
+  //         latency_counter <= 0;
+  //         if (num_to_read >= NUM_MAX) begin
+  //           num_to_read <= 2;
+  //         end else begin
+  //           num_to_read <= num_to_read + 1;
+  //         end
+  //       end else if (sw_sync[1]) begin
+  //         num_to_read <= 2;
+  //       end
+  //     end else if (state == 9) begin
+  //       latency_counter <= latency_counter + 1;
+  //       if (app_rdy) begin
+  //         state <= 10;
+  //       end
+  //     end else if (state == 10) begin
+  //       latency_counter <= latency_counter + 1;
+  //       if (app_rd_data_valid) begin
+  //         if (app_rd_data == 0) begin
+  //           state <= 9;
+  //           if (num_to_read >= NUM_MAX) begin
+  //             num_to_read <= 2;
+  //           end else begin
+  //             num_to_read <= num_to_read + 1;
+  //           end
+  //         end else begin
+  //           state <= 8;
+  //         end
+  //       end
+  //     end
+  //   end
+  // end
+
+  // assign app_sr_req = 0;    // We aren't using these signals.
+  // assign app_ref_req = 0;
+  // assign app_zq_req = 0;
+  // always_comb begin   // Made by Andrew Weinfeld, andrewj31415@gmail.com
+  //   if (state == 0) begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 1) begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 2) begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = num_to_write;
+  //     app_wdf_end = 1;
+  //     app_wdf_wren = 1;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 3) begin
+  //     app_addr = num_to_write << 8;
+  //     app_cmd = 0;
+  //     app_en = 1;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 4) begin
+  //     app_addr = num_to_read << 8;
+  //     app_cmd = 1;
+  //     app_en = 1;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 5) begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 6) begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 1;
+  //     app_wdf_wren = 1;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 7) begin
+  //     app_addr = num_to_write << 8;
+  //     app_cmd = 0;
+  //     app_en = 1;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 8) begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 9) begin
+  //     app_addr = num_to_read << 8;
+  //     app_cmd = 1;
+  //     app_en = 1;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else if (state == 10) begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end else begin
+  //     app_addr = 0;
+  //     app_cmd = 0;
+  //     app_en = 0;
+  //     app_wdf_data = 0;
+  //     app_wdf_end = 0;
+  //     app_wdf_wren = 0;
+  //     app_wdf_mask = 0;
+  //   end
+  // end
+
+  // logic [16+(16-4)/3:0] bcd;
+  // logic [16+(16-4)/3:0] bcd2;
+  // bin2bcd#(.W(16)) bin2bcd_inst (
+  //   .bin(num_to_read),
+  //   .bcd(bcd)
+  // );
+  // bin2bcd#(.W(16)) bin2bcd_inst2 (
+  //   .bin(latency_counter),
+  //   .bcd(bcd2)
+  // );
+  // assign val_to_display = {bcd2[15:0], bcd[15:0]};
+
+  // logic [6:0] ss_c;
+  // seven_segment_controller mssc (
+  //   .clk_in(ui_clk),
+  //   .rst_in(ui_clk_sync_rst),
+  //   .val_in(val_to_display),
+  //   .cat_out(ss_c),
+  //   .an_out({ss0_an, ss1_an})
+  // );
+  // assign ss0_c = ss_c; //control upper four digit's cathodes!
+  // assign ss1_c = ss_c; //same as above but for lower four digits!
+    
+   ddr3_mig ddr3_mig_inst 
+     (
+      .ddr3_dq(ddr3_dq),
+      .ddr3_dqs_n(ddr3_dqs_n),
+      .ddr3_dqs_p(ddr3_dqs_p),
+      .ddr3_addr(ddr3_addr),
+      .ddr3_ba(ddr3_ba),
+      .ddr3_ras_n(ddr3_ras_n),
+      .ddr3_cas_n(ddr3_cas_n),
+      .ddr3_we_n(ddr3_we_n),
+      .ddr3_reset_n(ddr3_reset_n),
+      .ddr3_ck_p(ddr3_ck_p),
+      .ddr3_ck_n(ddr3_ck_n),
+      .ddr3_cke(ddr3_cke),
+      .ddr3_dm(ddr3_dm),
+      .ddr3_odt(ddr3_odt),
+      .sys_clk_i(clk_camera),
+      .app_addr(app_addr),
+      .app_cmd(app_cmd),
+      .app_en(app_en),
+      .app_wdf_data(app_wdf_data),
+      .app_wdf_end(app_wdf_end),
+      .app_wdf_wren(app_wdf_wren),
+      .app_rd_data(app_rd_data),
+      .app_rd_data_end(app_rd_data_end),
+      .app_rd_data_valid(app_rd_data_valid),
+      .app_rdy(app_rdy),
+      .app_wdf_rdy(app_wdf_rdy), 
+      .app_sr_req(app_sr_req),
+      .app_ref_req(app_ref_req),
+      .app_zq_req(app_zq_req),
+      .app_sr_active(app_sr_active),
+      .app_ref_ack(app_ref_ack),
+      .app_zq_ack(app_zq_ack),
+      .ui_clk(ui_clk), 
+      .ui_clk_sync_rst(ui_clk_sync_rst),
+      .app_wdf_mask(app_wdf_mask),
+      .init_calib_complete(init_calib_complete),
+      .device_temp(device_temp),
+      .sys_rst(!sys_rst) // active low
+      );
+
+
+   // =============== CHAPTER: HDMI OUTPUT =========================
    
    logic [9:0] tmds_10b [0:2]; //output of each TMDS encoder!
    logic       tmds_signal [2:0]; //output of each TMDS serializer!
@@ -337,7 +778,7 @@ module top_level
    OBUFDS OBUFDS_clock(.I(clk_pixel), .O(hdmi_clk_p), .OB(hdmi_clk_n));
    
 
-   // -------------------------- MANTA PROBE ---------------------------
+   // ====================== CHAPTER: MANTA PROBE ===================
 
    // manta connection
    manta manta_inst
@@ -347,11 +788,14 @@ module top_level
       .data_valid_cb(valid_pixel),
       .data_valid_cc(valid_cc),
       .cam_data_in(pmoda_buf),
-      .cam_data_cb(data),
-      // .cam_data_cc(pixel_cc),
-      .hsync(hsync),
-      .vsync(vsync),
-      .pclk_cam_in(pmodb_buf[0])
+      // .cam_data_cb(data),
+      .cam_data_cc(pixel_cc),
+      // .hsync(hsync),
+      // .vsync(vsync),
+      .pclk_cam_in(pmodb_buf[0]),
+      .offset(offset),
+      .phrase_axis_ready(phrase_axis_ready),
+      .phrase_axis_valid(phrase_axis_valid)
       // fb BRAM
       // .frame_buffer_clk(clk_camera),
       // .frame_buffer_addr(fb_addr),
@@ -362,5 +806,43 @@ module top_level
    
 endmodule // top_level
 
+
+//written in lab!
+//debounce_2.sv is a different attempt at this done after class with a few students
+module  debouncer #(
+  parameter CLK_PERIOD_NS = 10,
+  parameter DEBOUNCE_TIME_MS = 5
+) (
+  input wire clk_in,
+  input wire rst_in,
+  input wire dirty_in,
+  output logic clean_out
+);
+  
+  parameter COUNTER_MAX = int($ceil(DEBOUNCE_TIME_MS*1_000_000/CLK_PERIOD_NS));
+  parameter COUNTER_SIZE = $clog2(COUNTER_MAX);
+  logic [COUNTER_SIZE-1:0] counter;
+  logic current; //register holds current output
+  logic old_dirty_in;
+  assign clean_out = current;
+
+  always_ff @(posedge clk_in) begin
+    if (rst_in)begin
+      counter <= 0;
+      current <= dirty_in;
+      old_dirty_in <= dirty_in;
+    end else begin
+      if (counter == COUNTER_MAX-1)begin
+        current <= old_dirty_in;
+        counter <= 0;
+      end else if (dirty_in == old_dirty_in) begin
+        counter <= counter +1;
+      end else begin
+        counter <= 0;
+      end
+    end
+    old_dirty_in <= dirty_in;
+  end
+endmodule
 
 `default_nettype wire

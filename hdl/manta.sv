@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 24 Dec 2023 at 19:59:34 by kiranv
+This module was generated with Manta v0.0.5 on 26 Dec 2023 at 22:03:46 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -19,10 +19,11 @@ manta manta_inst (
     .data_valid_cc(data_valid_cc), 
     .data_valid_cb(data_valid_cb), 
     .cam_data_in(cam_data_in), 
-    .cam_data_cb(cam_data_cb), 
-    .vsync(vsync), 
-    .hsync(hsync), 
-    .pclk_cam_in(pclk_cam_in));
+    .cam_data_cc(cam_data_cc), 
+    .pclk_cam_in(pclk_cam_in), 
+    .offset(offset), 
+    .phrase_axis_ready(phrase_axis_ready), 
+    .phrase_axis_valid(phrase_axis_valid));
 
 */
 
@@ -35,13 +36,14 @@ module manta (
     input wire data_valid_cc,
     input wire data_valid_cb,
     input wire [7:0] cam_data_in,
-    input wire [15:0] cam_data_cb,
-    input wire vsync,
-    input wire hsync,
-    input wire pclk_cam_in);
+    input wire [15:0] cam_data_cc,
+    input wire pclk_cam_in,
+    input wire [2:0] offset,
+    input wire phrase_axis_ready,
+    input wire phrase_axis_valid);
 
 
-    uart_rx #(.CLOCKS_PER_BAUD(64)) urx (
+    uart_rx #(.CLOCKS_PER_BAUD(66)) urx (
         .clk(clk),
         .rx(rx),
     
@@ -78,10 +80,11 @@ module manta (
         .data_valid_cc(data_valid_cc),
         .data_valid_cb(data_valid_cb),
         .cam_data_in(cam_data_in),
-        .cam_data_cb(cam_data_cb),
-        .vsync(vsync),
-        .hsync(hsync),
+        .cam_data_cc(cam_data_cc),
         .pclk_cam_in(pclk_cam_in),
+        .offset(offset),
+        .phrase_axis_ready(phrase_axis_ready),
+        .phrase_axis_valid(phrase_axis_valid),
     
         .addr_o(),
         .data_o(cam_logic_analyzer_btx_data),
@@ -107,7 +110,7 @@ module manta (
     reg btx_utx_start;
     reg utx_btx_done;
     
-    uart_tx #(.CLOCKS_PER_BAUD(64)) utx (
+    uart_tx #(.CLOCKS_PER_BAUD(66)) utx (
         .clk(clk),
     
         .data_i(btx_utx_data),
@@ -329,10 +332,11 @@ module logic_analyzer (
     input wire data_valid_cc,
     input wire data_valid_cb,
     input wire [7:0] cam_data_in,
-    input wire [15:0] cam_data_cb,
-    input wire vsync,
-    input wire hsync,
+    input wire [15:0] cam_data_cc,
     input wire pclk_cam_in,
+    input wire [2:0] offset,
+    input wire phrase_axis_ready,
+    input wire phrase_axis_valid,
 
     // input port
     input wire [15:0] addr_i,
@@ -362,9 +366,9 @@ module logic_analyzer (
     reg [ADDR_WIDTH-1:0] bram_addr;
     reg bram_we;
 
-    localparam TOTAL_PROBE_WIDTH = 29;
+    localparam TOTAL_PROBE_WIDTH = 32;
     reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {pclk_cam_in, hsync, vsync, cam_data_cb, cam_data_in, data_valid_cb, data_valid_cc};
+    assign probes_concat = {phrase_axis_valid, phrase_axis_ready, offset, pclk_cam_in, cam_data_cc, cam_data_in, data_valid_cb, data_valid_cc};
 
     logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
         .clk(clk),
@@ -422,10 +426,11 @@ module logic_analyzer (
         .data_valid_cc(data_valid_cc),
         .data_valid_cb(data_valid_cb),
         .cam_data_in(cam_data_in),
-        .cam_data_cb(cam_data_cb),
-        .vsync(vsync),
-        .hsync(hsync),
+        .cam_data_cc(cam_data_cc),
         .pclk_cam_in(pclk_cam_in),
+        .offset(offset),
+        .phrase_axis_ready(phrase_axis_ready),
+        .phrase_axis_valid(phrase_axis_valid),
 
         .trig(trig),
 
@@ -446,7 +451,7 @@ module logic_analyzer (
 
     // sample memory
     block_memory #(
-        .BASE_ADDR(21),
+        .BASE_ADDR(23),
         .WIDTH(TOTAL_PROBE_WIDTH),
         .DEPTH(SAMPLE_DEPTH)
         ) block_mem (
@@ -805,10 +810,11 @@ module trigger_block (
     input wire data_valid_cc,
     input wire data_valid_cb,
     input wire [7:0] cam_data_in,
-    input wire [15:0] cam_data_cb,
-    input wire vsync,
-    input wire hsync,
+    input wire [15:0] cam_data_cc,
     input wire pclk_cam_in,
+    input wire [2:0] offset,
+    input wire phrase_axis_ready,
+    input wire phrase_axis_valid,
 
     // trigger
     output reg trig,
@@ -826,7 +832,7 @@ module trigger_block (
     output reg valid_o);
 
     parameter BASE_ADDR = 0;
-    localparam MAX_ADDR = 21;
+    localparam MAX_ADDR = 23;
 
     // trigger configuration registers
     // - each probe gets an operation and a compare register
@@ -865,39 +871,17 @@ module trigger_block (
         .op(cam_data_in_op),
         .arg(cam_data_in_arg),
         .trig(cam_data_in_trig));
-    reg [3:0] cam_data_cb_op = 0;
-    reg [15:0] cam_data_cb_arg = 0;
-    reg cam_data_cb_trig;
+    reg [3:0] cam_data_cc_op = 0;
+    reg [15:0] cam_data_cc_arg = 0;
+    reg cam_data_cc_trig;
     
-    trigger #(.INPUT_WIDTH(16)) cam_data_cb_trigger (
+    trigger #(.INPUT_WIDTH(16)) cam_data_cc_trigger (
         .clk(clk),
     
-        .probe(cam_data_cb),
-        .op(cam_data_cb_op),
-        .arg(cam_data_cb_arg),
-        .trig(cam_data_cb_trig));
-    reg [3:0] vsync_op = 0;
-    reg vsync_arg = 0;
-    reg vsync_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) vsync_trigger (
-        .clk(clk),
-    
-        .probe(vsync),
-        .op(vsync_op),
-        .arg(vsync_arg),
-        .trig(vsync_trig));
-    reg [3:0] hsync_op = 0;
-    reg hsync_arg = 0;
-    reg hsync_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) hsync_trigger (
-        .clk(clk),
-    
-        .probe(hsync),
-        .op(hsync_op),
-        .arg(hsync_arg),
-        .trig(hsync_trig));
+        .probe(cam_data_cc),
+        .op(cam_data_cc_op),
+        .arg(cam_data_cc_arg),
+        .trig(cam_data_cc_trig));
     reg [3:0] pclk_cam_in_op = 0;
     reg pclk_cam_in_arg = 0;
     reg pclk_cam_in_trig;
@@ -909,8 +893,41 @@ module trigger_block (
         .op(pclk_cam_in_op),
         .arg(pclk_cam_in_arg),
         .trig(pclk_cam_in_trig));
+    reg [3:0] offset_op = 0;
+    reg [2:0] offset_arg = 0;
+    reg offset_trig;
+    
+    trigger #(.INPUT_WIDTH(3)) offset_trigger (
+        .clk(clk),
+    
+        .probe(offset),
+        .op(offset_op),
+        .arg(offset_arg),
+        .trig(offset_trig));
+    reg [3:0] phrase_axis_ready_op = 0;
+    reg phrase_axis_ready_arg = 0;
+    reg phrase_axis_ready_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) phrase_axis_ready_trigger (
+        .clk(clk),
+    
+        .probe(phrase_axis_ready),
+        .op(phrase_axis_ready_op),
+        .arg(phrase_axis_ready_arg),
+        .trig(phrase_axis_ready_trig));
+    reg [3:0] phrase_axis_valid_op = 0;
+    reg phrase_axis_valid_arg = 0;
+    reg phrase_axis_valid_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) phrase_axis_valid_trigger (
+        .clk(clk),
+    
+        .probe(phrase_axis_valid),
+        .op(phrase_axis_valid_op),
+        .arg(phrase_axis_valid_arg),
+        .trig(phrase_axis_valid_trig));
 
-   assign trig = data_valid_cc_trig || data_valid_cb_trig || cam_data_in_trig || cam_data_cb_trig || vsync_trig || hsync_trig || pclk_cam_in_trig;
+   assign trig = data_valid_cc_trig || data_valid_cb_trig || cam_data_in_trig || cam_data_cc_trig || pclk_cam_in_trig || offset_trig || phrase_axis_ready_trig || phrase_axis_valid_trig;
 
     // perform register operations
     always @(posedge clk) begin
@@ -930,14 +947,16 @@ module trigger_block (
                     BASE_ADDR + 3: data_o <= data_valid_cb_arg;
                     BASE_ADDR + 4: data_o <= cam_data_in_op;
                     BASE_ADDR + 5: data_o <= cam_data_in_arg;
-                    BASE_ADDR + 6: data_o <= cam_data_cb_op;
-                    BASE_ADDR + 7: data_o <= cam_data_cb_arg;
-                    BASE_ADDR + 8: data_o <= vsync_op;
-                    BASE_ADDR + 9: data_o <= vsync_arg;
-                    BASE_ADDR + 10: data_o <= hsync_op;
-                    BASE_ADDR + 11: data_o <= hsync_arg;
-                    BASE_ADDR + 12: data_o <= pclk_cam_in_op;
-                    BASE_ADDR + 13: data_o <= pclk_cam_in_arg;
+                    BASE_ADDR + 6: data_o <= cam_data_cc_op;
+                    BASE_ADDR + 7: data_o <= cam_data_cc_arg;
+                    BASE_ADDR + 8: data_o <= pclk_cam_in_op;
+                    BASE_ADDR + 9: data_o <= pclk_cam_in_arg;
+                    BASE_ADDR + 10: data_o <= offset_op;
+                    BASE_ADDR + 11: data_o <= offset_arg;
+                    BASE_ADDR + 12: data_o <= phrase_axis_ready_op;
+                    BASE_ADDR + 13: data_o <= phrase_axis_ready_arg;
+                    BASE_ADDR + 14: data_o <= phrase_axis_valid_op;
+                    BASE_ADDR + 15: data_o <= phrase_axis_valid_arg;
                 endcase
             end
 
@@ -950,14 +969,16 @@ module trigger_block (
                     BASE_ADDR + 3: data_valid_cb_arg <= data_i;
                     BASE_ADDR + 4: cam_data_in_op <= data_i;
                     BASE_ADDR + 5: cam_data_in_arg <= data_i;
-                    BASE_ADDR + 6: cam_data_cb_op <= data_i;
-                    BASE_ADDR + 7: cam_data_cb_arg <= data_i;
-                    BASE_ADDR + 8: vsync_op <= data_i;
-                    BASE_ADDR + 9: vsync_arg <= data_i;
-                    BASE_ADDR + 10: hsync_op <= data_i;
-                    BASE_ADDR + 11: hsync_arg <= data_i;
-                    BASE_ADDR + 12: pclk_cam_in_op <= data_i;
-                    BASE_ADDR + 13: pclk_cam_in_arg <= data_i;
+                    BASE_ADDR + 6: cam_data_cc_op <= data_i;
+                    BASE_ADDR + 7: cam_data_cc_arg <= data_i;
+                    BASE_ADDR + 8: pclk_cam_in_op <= data_i;
+                    BASE_ADDR + 9: pclk_cam_in_arg <= data_i;
+                    BASE_ADDR + 10: offset_op <= data_i;
+                    BASE_ADDR + 11: offset_arg <= data_i;
+                    BASE_ADDR + 12: phrase_axis_ready_op <= data_i;
+                    BASE_ADDR + 13: phrase_axis_ready_arg <= data_i;
+                    BASE_ADDR + 14: phrase_axis_valid_op <= data_i;
+                    BASE_ADDR + 15: phrase_axis_valid_arg <= data_i;
                 endcase
             end
         end

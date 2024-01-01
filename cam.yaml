@@ -3,24 +3,26 @@ cores:
 
   cam_logic_analyzer:
     type: logic_analyzer
-    sample_depth: 16384
+    sample_depth: 8192
     probes:
-      data_valid_cc: 1
-      data_valid_cb: 1
-      cam_data_in: 8
-      # cam_data_cb: 16
-      cam_data_cc: 16
-      # vsync: 1
-      # hsync: 1
-      pclk_cam_in: 1
-      offset: 3
-      phrase_axis_ready: 1
-      phrase_axis_valid: 1
-      
+      tg_state: 3
+      app_rdy: 1
+      app_en: 1
+      app_cmd: 3
+      app_addr: 21
+      app_wdf_rdy: 1
+      app_wdf_wren: 1
+      app_wdf_data_slice: 16
+      app_rd_data_valid: 1      
+      app_rd_data_slice: 16
+      app_rd_data_end: 1
+      write_axis_smallpile: 1
+      read_axis_af: 1
+      trigger_btn: 1
 
     trigger_loc: 20
     triggers:
-      - pclk_cam_in RISING
+      - app_addr EQ 0
 
   # frame_buffer:
   #   type: block_memory
@@ -30,4 +32,5 @@ cores:
 uart:
   port: "/dev/ttyUSB1"
   baudrate: 3000000
-  clock_freq: 200000000
+  # clock_freq: 200000000
+  clock_freq: 81250000

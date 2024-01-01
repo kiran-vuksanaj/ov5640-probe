@@ -12,13 +12,14 @@ module build_wr_data
     // output axis: 128 bit mig-phrases
     output logic 	 valid_out,
     input wire 		 ready_out,
-    output logic [127:0] data_out,
-    logic [2:0] 	 offset
+    output logic [127:0] data_out
     );
 
    logic [15:0] 	 words [7:0]; // unpacked version of data_out
    logic 		 accept_in;
-   // logic [2:0] 	 offset;
+   logic [2:0] 		 offset;
+   logic 		 offset_rollover;
+   logic 		 phrase_taken;
    
    assign data_out = {words[0],
 		      words[1],
@@ -33,28 +34,88 @@ module build_wr_data
      (.clk_in(clk_in),
       .rst_in(rst_in),
       .incr_in(accept_in),
-      .addr_out(offset));
+      .addr_out(offset),
+      .rollover_out(offset_rollover));
 
-   assign ready_in = ready_out;
+   assign ready_in = phrase_taken;
    assign accept_in = ready_in && valid_in;
+   assign valid_out = (offset_rollover) || ~phrase_taken;
 
    always_ff @(posedge clk_in) begin
       if (rst_in) begin
-	 valid_out <= 1'b0;
+	 phrase_taken <= 1'b1;
       end else begin
 	 if (accept_in) begin
 	    // write data to proper section of phrasedata
 	    words[offset] <= data_in;
-	    valid_out <= (offset==7);
-	 end else begin
-	    valid_out <= 1'b0;
+	 end
+	 if (offset == 7 || ~phrase_taken) begin
+	    phrase_taken <= ready_out;
 	 end
       end
    end
    
 endmodule // build_wr_data
 
+module digest_phrase
+  (
+   input wire 	       clk_in,
+   input wire 	       rst_in,
+   // input axis: 128 bit phrases
+   input wire 	       valid_phrase,
+   output logic        ready_phrase,
+   input wire [127:0]  phrase_data,
+   // output axis: 16 bit words
+   output logic        valid_word,
+   input wire 	       ready_word,
+   output logic [15:0] word
+   );
 
+
+   logic [2:0] 	       offset;
+   addr_increment #(.ROLLOVER(8)) aio
+     (.clk_in(clk_in),
+      .rst_in(rst_in),
+      .incr_in( ready_word && valid_word ),
+      .addr_out(offset));
+
+   logic [127:0]       phrase;
+   logic [15:0]        words[7:0]; // unpacked phrase
+   assign words[7] = phrase[15:0];
+   assign words[6] = phrase[31:16];
+   assign words[5] = phrase[47:32];
+   assign words[4] = phrase[63:48];
+   assign words[3] = phrase[79:64];
+   assign words[2] = phrase[95:80];
+   assign words[1] = phrase[111:96];
+   assign words[0] = phrase[127:112];
+
+   logic 	       needphrase;
+   
+   assign valid_word = ~needphrase; // lock output + keep offset=0 while
+   
+   assign ready_phrase = ((offset == 7) && ready_word) ||
+			 ((offset == 0) && needphrase);
+   
+   assign word = words[offset];
+   
+   always_ff @(posedge clk_in) begin
+      if (rst_in) begin
+	 phrase <= 128'b0;
+	 needphrase <= 1'b1;
+      end else begin
+	 if (ready_phrase) begin
+	    if (valid_phrase) begin
+	       needphrase <= 1'b0;
+	       phrase <= phrase_data;
+	    end else begin
+	       needphrase <= 1'b1;
+	    end
+	 end
+      end
+   end
+   
+endmodule   
 
 module addr_increment
   #(parameter ROLLOVER = 128,

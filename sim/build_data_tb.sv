@@ -51,39 +51,80 @@ module build_data_tb;
       valid_in = 1;
       data_in = 16'hABCD;
       #10;
+      valid_in = 0;
+      #20;
 
+      valid_in = 1;
       data_in = 16'hDCBA;
       #10;
+      valid_in = 0;
+      #20;
 
+
+      valid_in = 1;
       data_in = 16'h1234;
       #10;
+      valid_in = 0;
+      #20;
 
+
+      valid_in = 1;
       data_in = 16'h5678;
       #10;
+      valid_in = 0;
+      #20;
 
+
+      valid_in = 1;
       data_in = 16'h7654;
       #10;
+      valid_in = 0;
+      #20;
 
+
+      valid_in = 1;
       data_in = 16'h3210;
       #10;
+      valid_in = 0;
+      #20;
 
+
+      valid_in = 1;
       data_in = 16'hDEAD;
       #10;
+      valid_in = 0;
+      #20;
 
+
+      valid_in = 1;
+      ready_out = 0;
       data_in = 16'hBEEF;
       #10;
+      valid_in = 0;
+      #20;
 
-      data_in = 16'h7777;
-      #10;
 
-      ready_out = 0;
-      data_in = 16'h6666;
+      valid_in = 1;
+      data_in = 16'hFFFF;
       #10;
+      valid_in = 0;
+      #20;
+
 
       ready_out = 1;
-      valid_in = 0;
-      data_in = 16'h5555;
+      valid_in = 1;
+      data_in = 16'hEEEE;
       #10;
+      valid_in = 0;
+      #20;
+
+
+      valid_in = 0;
+      data_in = 16'hABBA;
+      #10;
+      valid_in = 0;
+      #20;
+
 
       valid_in = 1;
       data_in = 16'h4444;

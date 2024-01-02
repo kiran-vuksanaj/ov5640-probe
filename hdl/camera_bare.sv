@@ -43,7 +43,8 @@ module camera_bare
 	       valid_out <= 1'b0;
 	    end else begin
 	       data_out[7:0] <= data_cam_in;
-	       valid_out <= new_row ? 1'b0 : 1'b1; // if its a new row, wait a cycle!
+	       // valid_out <= new_row ? 1'b0 : 1'b1; // if its a new row, wait a cycle!
+	       valid_out <= 1'b1; // i am, sus of this change to say the least...
 	    end
 	    hi_byte <= (~real_pixel_prev && real_pixel) ? 1'b0 : ~hi_byte; // spot check change
 	    // sync data: when new row starts (first real pixel data), that's a first-half byte

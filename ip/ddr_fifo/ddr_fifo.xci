@@ -4,14 +4,14 @@
     "xci_name": "ddr_fifo",
     "component_reference": "xilinx.com:ip:axis_data_fifo:2.0",
     "ip_revision": "10",
-    "gen_directory": "ip/ddr_fifo",
+    "gen_directory": "../../../../getfifos.gen/sources_1/ip/ddr_fifo",
     "parameters": {
       "component_parameters": {
         "TDATA_NUM_BYTES": [ { "value": "16", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "TID_WIDTH": [ { "value": "0", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "TDEST_WIDTH": [ { "value": "0", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "TUSER_WIDTH": [ { "value": "0", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "FIFO_DEPTH": [ { "value": "512", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "TUSER_WIDTH": [ { "value": "1", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "FIFO_DEPTH": [ { "value": "128", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "FIFO_MODE": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "IS_ACLK_ASYNC": [ { "value": "1", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "ACLKEN_CONV_MODE": [ { "value": "0", "resolve_type": "user", "format": "long", "usage": "all" } ],
@@ -39,8 +39,8 @@
         "C_AXIS_TID_WIDTH": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_AXIS_TDEST_WIDTH": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_AXIS_TUSER_WIDTH": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
-        "C_AXIS_SIGNAL_SET": [ { "value": "0b00000000000000000000000000000011", "resolve_type": "generated", "format": "bitString", "usage": "all" } ],
-        "C_FIFO_DEPTH": [ { "value": "512", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "C_AXIS_SIGNAL_SET": [ { "value": "0b00000000000000000000000010000011", "resolve_type": "generated", "format": "bitString", "usage": "all" } ],
+        "C_FIFO_DEPTH": [ { "value": "128", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_FIFO_MODE": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_IS_ACLK_ASYNC": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_SYNCHRONIZER_STAGE": [ { "value": "3", "resolve_type": "generated", "format": "long", "usage": "all" } ],
@@ -68,7 +68,7 @@
         "IPCONTEXT": [ { "value": "IP_Flow" } ],
         "IPREVISION": [ { "value": "10" } ],
         "MANAGED": [ { "value": "TRUE" } ],
-        "OUTPUTDIR": [ { "value": "ip/ddr_fifo" } ],
+        "OUTPUTDIR": [ { "value": "../../../../getfifos.gen/sources_1/ip/ddr_fifo" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
         "SHAREDDIR": [ { "value": "." } ],
         "SWVERSION": [ { "value": "2023.1" } ],
@@ -82,10 +82,12 @@
         "s_axis_tvalid": [ { "direction": "in", "driver_value": "0x0" } ],
         "s_axis_tready": [ { "direction": "out" } ],
         "s_axis_tdata": [ { "direction": "in", "size_left": "127", "size_right": "0", "driver_value": "0x00000000000000000000000000000000" } ],
+        "s_axis_tuser": [ { "direction": "in", "size_left": "0", "size_right": "0", "driver_value": "0x0" } ],
         "m_axis_aclk": [ { "direction": "in", "driver_value": "0x0" } ],
         "m_axis_tvalid": [ { "direction": "out" } ],
         "m_axis_tready": [ { "direction": "in", "driver_value": "0x1" } ],
         "m_axis_tdata": [ { "direction": "out", "size_left": "127", "size_right": "0" } ],
+        "m_axis_tuser": [ { "direction": "out", "size_left": "0", "size_right": "0" } ],
         "prog_empty": [ { "direction": "out" } ],
         "prog_full": [ { "direction": "out" } ]
       },
@@ -98,7 +100,7 @@
             "TDATA_NUM_BYTES": [ { "value": "16", "value_src": "auto", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "TDEST_WIDTH": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "TID_WIDTH": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "TUSER_WIDTH": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "TUSER_WIDTH": [ { "value": "1", "value_src": "auto", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_TREADY": [ { "value": "1", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_TSTRB": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_TKEEP": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
@@ -112,6 +114,7 @@
           "port_maps": {
             "TDATA": [ { "physical_name": "s_axis_tdata" } ],
             "TREADY": [ { "physical_name": "s_axis_tready" } ],
+            "TUSER": [ { "physical_name": "s_axis_tuser" } ],
             "TVALID": [ { "physical_name": "s_axis_tvalid" } ]
           }
         },
@@ -123,7 +126,7 @@
             "TDATA_NUM_BYTES": [ { "value": "16", "value_src": "auto", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "TDEST_WIDTH": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "TID_WIDTH": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "TUSER_WIDTH": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "TUSER_WIDTH": [ { "value": "1", "value_src": "auto", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_TREADY": [ { "value": "1", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_TSTRB": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_TKEEP": [ { "value": "0", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
@@ -137,6 +140,7 @@
           "port_maps": {
             "TDATA": [ { "physical_name": "m_axis_tdata" } ],
             "TREADY": [ { "physical_name": "m_axis_tready" } ],
+            "TUSER": [ { "physical_name": "m_axis_tuser" } ],
             "TVALID": [ { "physical_name": "m_axis_tvalid" } ]
           }
         },

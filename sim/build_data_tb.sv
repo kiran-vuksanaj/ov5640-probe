@@ -8,10 +8,12 @@ module build_data_tb;
    logic valid_in;
    logic ready_in;
    logic [15:0] data_in;
+   logic 	newframe_in;
 
    logic 	valid_out;
    logic 	ready_out;
    logic [127:0] data_out;
+   logic 	 tuser_out;
 
    build_wr_data bwdtm
      (.clk_in(clk),
@@ -19,9 +21,11 @@ module build_data_tb;
       .valid_in(valid_in),
       .ready_in(ready_in),
       .data_in(data_in),
+      .newframe_in(newframe_in),
       .valid_out(valid_out),
       .ready_out(ready_out),
-      .data_out(data_out));
+      .data_out(data_out),
+      .tuser_out(tuser_out));
    
    
    always begin
@@ -46,12 +50,15 @@ module build_data_tb;
       valid_in = 0;
       ready_out = 1;
       data_in = 0;
+      newframe_in = 0;
       #10;
 
       valid_in = 1;
       data_in = 16'hABCD;
+      newframe_in = 1;
       #10;
       valid_in = 0;
+      newframe_in = 0;
       #20;
 
       valid_in = 1;

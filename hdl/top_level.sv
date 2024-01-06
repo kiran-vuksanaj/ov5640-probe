@@ -229,36 +229,11 @@ module top_level
    logic 	phrase_axis_ready;
    logic [127:0] phrase_axis_data;
 
-   // logic [2:0] 	 offset;
-
-   logic [15:0]  pixel_cc_filter;
-
-   /* temporary code to test out hcount/vcount in a different way */
+   logic 	 newframe_cc;
+   logic 	 phrase_axis_tuser;
    logic 	 ready_builder;
    
-   logic [20:0]  addr_simulator;
-   addr_increment #(.ROLLOVER(1280*720)) aias
-     (.clk_in(clk_camera),
-      .rst_in(sys_rst_camera),
-      .incr_in( valid_cc && ready_builder ),
-      .addr_out( addr_simulator )
-      );
-   logic [12:0]	 hcount_fake;
-   logic [12:0]  vcount_fake;
-   assign hcount_fake = addr_simulator % 1280;
-   assign vcount_fake = addr_simulator / 1280;
-
-   logic [15:0]  hcount_stripes;
-   assign hcount_stripes = {hcount_fake[5:1],hcount_fake[5:1],1'b0,hcount_fake[5:1]};
-
-   logic [15:0]  vcount_stripes;
-   assign vcount_stripes = {vcount_fake[7:3],vcount_fake[7:3],1'b0,vcount_fake[7:3]};
-   
-   // assign pixel_cc_filter = (hcount_cc < 200 || hcount_cc > 300) ? pixel_cc : 0'hF81F;
-   // assign pixel_cc_filter = 16'hFFFF;
-   // assign pixel_cc_filter = {hcount_cc[4:0],vcount_cc[5:0],5'b10101};
-   assign pixel_cc_filter = sw[2] ? vcount_stripes : hcount_stripes;
-   /* end temp code */
+   assign newframe_cc = (hcount_cc <= 1 && vcount_cc == 0);
    
    build_wr_data
      (.clk_in(clk_camera),
@@ -267,9 +242,11 @@ module top_level
       .ready_in(ready_builder), // discard
       // .data_in(pixel_cc_filter),// temporary test value
       .data_in(pixel_cc),
+      .newframe_in(newframe_cc),
       .valid_out(phrase_axis_valid),
       .ready_out(phrase_axis_ready),
-      .data_out(phrase_axis_data)
+      .data_out(phrase_axis_data),
+      .tuser_out(phrase_axis_tuser)
       );
 
 
@@ -387,6 +364,7 @@ module top_level
    logic       write_axis_valid;
    logic       write_axis_ready;
    logic [127:0] write_axis_phrase;
+   logic 	 write_axis_tuser;
 
    logic 	 small_pile;
 
@@ -396,10 +374,12 @@ module top_level
       .s_axis_tvalid(phrase_axis_valid),
       .s_axis_tready(phrase_axis_ready),
       .s_axis_tdata(phrase_axis_data),
+      .s_axis_tuser(phrase_axis_tuser),
       .m_axis_aclk(ui_clk),
       .m_axis_tvalid(write_axis_valid),
       .m_axis_tready(write_axis_ready), // ready will spit you data! use in proper state
       .m_axis_tdata(write_axis_phrase),
+      .m_axis_tuser(write_axis_tuser),
       .prog_empty(small_pile));
 
    // assign write_axis_ready = 1;
@@ -422,6 +402,7 @@ module top_level
    logic 	 read_axis_valid;
    logic 	 read_axis_af;
    logic 	 read_axis_ready;
+   logic 	 read_axis_tuser;
 
    logic [2:0] 	 state;
    
@@ -450,10 +431,12 @@ module top_level
       .write_axis_valid(write_axis_valid),
       .write_axis_ready(write_axis_ready),
       .write_axis_smallpile(small_pile),
+      .write_axis_tuser(write_axis_tuser),
       .read_axis_data(read_axis_data),
       .read_axis_valid(read_axis_valid),
       .read_axis_af(read_axis_af),
       .read_axis_ready(read_axis_ready),
+      .read_axis_tuser(read_axis_tuser),
       .state_out(state),
       .trigger_btn_sync(trigger_btn_ui)
       );
@@ -462,6 +445,7 @@ module top_level
    logic 	 hdmi_axis_valid;
    logic 	 hdmi_axis_ready;
    logic [127:0] hdmi_axis_data;
+   logic 	 hdmi_axis_tuser;
    
    ddr_fifo hdmi_read
      (.s_axis_aresetn(~sys_rst_ui), // active low
@@ -469,15 +453,18 @@ module top_level
       .s_axis_tvalid(read_axis_valid),
       .s_axis_tready(read_axis_ready),
       .s_axis_tdata(read_axis_data),
+      .s_axis_tuser(read_axis_tuser),
       .prog_full(read_axis_af),
       .m_axis_aclk(clk_pixel),
       .m_axis_tvalid(hdmi_axis_valid),
       .m_axis_tready(hdmi_axis_ready), // ready will spit you data! use in proper state
-      .m_axis_tdata(hdmi_axis_data));
+      .m_axis_tdata(hdmi_axis_data),
+      .m_axis_tuser(hdmi_axis_tuser));
 
    logic [15:0]  hdmi_pixel;
    logic 	 hdmi_pixel_ready;
    logic 	 hdmi_pixel_valid;
+   logic 	 hdmi_pixel_nf;
 
    digest_phrase
      (.clk_in(clk_pixel),
@@ -485,8 +472,10 @@ module top_level
       .valid_phrase(hdmi_axis_valid),
       .ready_phrase(hdmi_axis_ready),
       .phrase_data(hdmi_axis_data),
+      .phrase_tuser(hdmi_axis_tuser),
       .valid_word(hdmi_pixel_valid),
       .ready_word(hdmi_pixel_ready),
+      .newframe_out(hdmi_pixel_nf),
       .word(hdmi_pixel));
    
    // assign led[5:4] = hdmi_pixel[8:7];
@@ -501,7 +490,7 @@ module top_level
 		       write_axis_ready, write_axis_valid, // 12:11
 		       write_axis_phrase == 128'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF, small_pile, // 10:9
 		       phrase_axis_ready, phrase_axis_valid, phrase_axis_data == 128'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF, //8:6
-		       valid_cc, pixel_cc_filter == 16'hFFFF, 1'b0//5:3
+		       valid_cc, pixel_cc == 16'hFFFF, 1'b0//5:3
 		       };
     
    ddr3_mig ddr3_mig_inst 
@@ -557,7 +546,7 @@ module top_level
    // assign red = 8'hFF;
    // assign green = 8'h77;
    // assign blue = 8'hAA;
-   assign hdmi_pixel_ready = active_draw_hdmi;
+   assign hdmi_pixel_ready = active_draw_hdmi && ( ~hdmi_pixel_nf || (vcount_hdmi == 0 && hcount_hdmi == 0));
    // logic [15:0] hdmi_pixel_hold;
    // always_ff @(posedge clk_pixel) begin
    //    if (sys_rst_pixel) begin
@@ -566,9 +555,9 @@ module top_level
    // 	 hdmi_pixel_hold <= (hdmi_pixel_ready && hdmi_pixel_valid) ? hdmi_pixel : hdmi_pixel_hold;
    //    end
    // end
-   assign red = (vcount_hdmi == 222) ? 8'h00 : (hdmi_pixel_valid ? {hdmi_pixel[15:11],3'b0} : 8'hFF);
-   assign green = (vcount_hdmi == 222) ? 8'hFF : (hdmi_pixel_valid ? {hdmi_pixel[10:5],2'b0} : 8'h77);
-   assign blue = (vcount_hdmi == 222) ? 8'h00 : (hdmi_pixel_valid ? {hdmi_pixel[4:0],3'b0} : 8'hAA);
+   assign red = hdmi_pixel_valid ? {hdmi_pixel[15:11],3'b0} : 8'hFF;
+   assign green = hdmi_pixel_valid ? {hdmi_pixel[10:5],2'b0} : 8'h77;
+   assign blue = hdmi_pixel_valid ? {hdmi_pixel[4:0],3'b0} : 8'hAA;
    // assign red = hdmi_pixel_valid ? 8'hFF : 16'h88;
    // assign green = hdmi_pixel_valid ? 8'h77 : 8'h88;
    // assign blue = hdmi_pixel_valid ? 8'hAA : 8'h88;
@@ -674,7 +663,9 @@ module top_level
       .app_rd_data_slice(app_rd_data[95:80]),
       .app_rd_data_end(app_rd_data_end),
       .write_axis_smallpile(small_pile), 
-      .read_axis_af(read_axis_af), 
+      .read_axis_af(read_axis_af),
+      .write_axis_tuser(write_axis_tuser),
+      .read_axis_tuser(read_axis_tuser),
       .trigger_btn(trigger_btn_ui)
       // fb BRAM
       // .frame_buffer_clk(clk_camera),

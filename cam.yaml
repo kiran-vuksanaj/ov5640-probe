@@ -19,10 +19,12 @@ cores:
       write_axis_smallpile: 1
       read_axis_af: 1
       trigger_btn: 1
+      write_axis_tuser: 1
+      read_axis_tuser: 1
 
     trigger_loc: 20
     triggers:
-      - app_addr EQ 0
+      - write_axis_tuser RISING
 
   # frame_buffer:
   #   type: block_memory

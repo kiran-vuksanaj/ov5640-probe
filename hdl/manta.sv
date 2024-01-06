@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 31 Dec 2023 at 20:40:32 by kiranv
+This module was generated with Manta v0.0.5 on 03 Jan 2024 at 19:00:38 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -29,7 +29,9 @@ manta manta_inst (
     .app_rd_data_end(app_rd_data_end), 
     .write_axis_smallpile(write_axis_smallpile), 
     .read_axis_af(read_axis_af), 
-    .trigger_btn(trigger_btn));
+    .trigger_btn(trigger_btn), 
+    .write_axis_tuser(write_axis_tuser), 
+    .read_axis_tuser(read_axis_tuser));
 
 */
 
@@ -52,7 +54,9 @@ module manta (
     input wire app_rd_data_end,
     input wire write_axis_smallpile,
     input wire read_axis_af,
-    input wire trigger_btn);
+    input wire trigger_btn,
+    input wire write_axis_tuser,
+    input wire read_axis_tuser);
 
 
     uart_rx #(.CLOCKS_PER_BAUD(27)) urx (
@@ -103,6 +107,8 @@ module manta (
         .write_axis_smallpile(write_axis_smallpile),
         .read_axis_af(read_axis_af),
         .trigger_btn(trigger_btn),
+        .write_axis_tuser(write_axis_tuser),
+        .read_axis_tuser(read_axis_tuser),
     
         .addr_o(),
         .data_o(cam_logic_analyzer_btx_data),
@@ -361,6 +367,8 @@ module logic_analyzer (
     input wire write_axis_smallpile,
     input wire read_axis_af,
     input wire trigger_btn,
+    input wire write_axis_tuser,
+    input wire read_axis_tuser,
 
     // input port
     input wire [15:0] addr_i,
@@ -390,9 +398,9 @@ module logic_analyzer (
     reg [ADDR_WIDTH-1:0] bram_addr;
     reg bram_we;
 
-    localparam TOTAL_PROBE_WIDTH = 68;
+    localparam TOTAL_PROBE_WIDTH = 70;
     reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {trigger_btn, read_axis_af, write_axis_smallpile, app_rd_data_end, app_rd_data_slice, app_rd_data_valid, app_wdf_data_slice, app_wdf_wren, app_wdf_rdy, app_addr, app_cmd, app_en, app_rdy, tg_state};
+    assign probes_concat = {read_axis_tuser, write_axis_tuser, trigger_btn, read_axis_af, write_axis_smallpile, app_rd_data_end, app_rd_data_slice, app_rd_data_valid, app_wdf_data_slice, app_wdf_wren, app_wdf_rdy, app_addr, app_cmd, app_en, app_rdy, tg_state};
 
     logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
         .clk(clk),
@@ -461,6 +469,8 @@ module logic_analyzer (
         .write_axis_smallpile(write_axis_smallpile),
         .read_axis_af(read_axis_af),
         .trigger_btn(trigger_btn),
+        .write_axis_tuser(write_axis_tuser),
+        .read_axis_tuser(read_axis_tuser),
 
         .trig(trig),
 
@@ -481,7 +491,7 @@ module logic_analyzer (
 
     // sample memory
     block_memory #(
-        .BASE_ADDR(35),
+        .BASE_ADDR(39),
         .WIDTH(TOTAL_PROBE_WIDTH),
         .DEPTH(SAMPLE_DEPTH)
         ) block_mem (
@@ -851,6 +861,8 @@ module trigger_block (
     input wire write_axis_smallpile,
     input wire read_axis_af,
     input wire trigger_btn,
+    input wire write_axis_tuser,
+    input wire read_axis_tuser,
 
     // trigger
     output reg trig,
@@ -868,7 +880,7 @@ module trigger_block (
     output reg valid_o);
 
     parameter BASE_ADDR = 0;
-    localparam MAX_ADDR = 35;
+    localparam MAX_ADDR = 39;
 
     // trigger configuration registers
     // - each probe gets an operation and a compare register
@@ -1028,8 +1040,30 @@ module trigger_block (
         .op(trigger_btn_op),
         .arg(trigger_btn_arg),
         .trig(trigger_btn_trig));
+    reg [3:0] write_axis_tuser_op = 0;
+    reg write_axis_tuser_arg = 0;
+    reg write_axis_tuser_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) write_axis_tuser_trigger (
+        .clk(clk),
+    
+        .probe(write_axis_tuser),
+        .op(write_axis_tuser_op),
+        .arg(write_axis_tuser_arg),
+        .trig(write_axis_tuser_trig));
+    reg [3:0] read_axis_tuser_op = 0;
+    reg read_axis_tuser_arg = 0;
+    reg read_axis_tuser_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) read_axis_tuser_trigger (
+        .clk(clk),
+    
+        .probe(read_axis_tuser),
+        .op(read_axis_tuser_op),
+        .arg(read_axis_tuser_arg),
+        .trig(read_axis_tuser_trig));
 
-   assign trig = tg_state_trig || app_rdy_trig || app_en_trig || app_cmd_trig || app_addr_trig || app_wdf_rdy_trig || app_wdf_wren_trig || app_wdf_data_slice_trig || app_rd_data_valid_trig || app_rd_data_slice_trig || app_rd_data_end_trig || write_axis_smallpile_trig || read_axis_af_trig || trigger_btn_trig;
+   assign trig = tg_state_trig || app_rdy_trig || app_en_trig || app_cmd_trig || app_addr_trig || app_wdf_rdy_trig || app_wdf_wren_trig || app_wdf_data_slice_trig || app_rd_data_valid_trig || app_rd_data_slice_trig || app_rd_data_end_trig || write_axis_smallpile_trig || read_axis_af_trig || trigger_btn_trig || write_axis_tuser_trig || read_axis_tuser_trig;
 
     // perform register operations
     always @(posedge clk) begin
@@ -1071,6 +1105,10 @@ module trigger_block (
                     BASE_ADDR + 25: data_o <= read_axis_af_arg;
                     BASE_ADDR + 26: data_o <= trigger_btn_op;
                     BASE_ADDR + 27: data_o <= trigger_btn_arg;
+                    BASE_ADDR + 28: data_o <= write_axis_tuser_op;
+                    BASE_ADDR + 29: data_o <= write_axis_tuser_arg;
+                    BASE_ADDR + 30: data_o <= read_axis_tuser_op;
+                    BASE_ADDR + 31: data_o <= read_axis_tuser_arg;
                 endcase
             end
 
@@ -1105,6 +1143,10 @@ module trigger_block (
                     BASE_ADDR + 25: read_axis_af_arg <= data_i;
                     BASE_ADDR + 26: trigger_btn_op <= data_i;
                     BASE_ADDR + 27: trigger_btn_arg <= data_i;
+                    BASE_ADDR + 28: write_axis_tuser_op <= data_i;
+                    BASE_ADDR + 29: write_axis_tuser_arg <= data_i;
+                    BASE_ADDR + 30: read_axis_tuser_op <= data_i;
+                    BASE_ADDR + 31: read_axis_tuser_arg <= data_i;
                 endcase
             end
         end

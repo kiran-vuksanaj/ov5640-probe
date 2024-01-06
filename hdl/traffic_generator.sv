@@ -31,11 +31,13 @@ module traffic_generator
    input wire 		init_calib_complete,
    // Write AXIS FIFO input
    input wire [127:0] 	write_axis_data,
+   input wire 		write_axis_tuser,
    input wire 		write_axis_valid,
    input wire 		write_axis_smallpile,
    output logic 	write_axis_ready,
    // Read AXIS FIFO output
    output logic [127:0] read_axis_data,
+   output logic 	read_axis_tuser,
    output logic 	read_axis_valid,
    input wire 		read_axis_af,
    input wire 		read_axis_ready,
@@ -70,16 +72,21 @@ module traffic_generator
 
    assign state_out = {state[2:0]};
    
+   logic [26:0] wr_addr_incr;
    logic [26:0] wr_addr;
    logic 	rollover_wr_addr;
    
    addr_increment #(.ROLLOVER(1280*720 >> 3)) aiwa
      (.clk_in(clk_in),
-      .rst_in(rst_in),
+      .rst_in(rst_in || (write_axis_valid && write_axis_tuser)),
       .incr_in( write_ready && app_en ),
-      .addr_out( wr_addr ),
+      .addr_out( wr_addr_incr ),
       .rollover_out(rollover_wr_addr));
 
+   // get instant combinational logic for when a new frame is indicated
+   // (this feels jank)
+   assign wr_addr = (write_axis_valid && write_axis_tuser) ? 0 : wr_addr_incr + 1;
+   
    logic 	write_ready;
    logic 	wdf_ready;
    assign wdf_ready = app_rdy && app_wdf_rdy;
@@ -120,6 +127,7 @@ module traffic_generator
    // issue_rd_cmd logic should prevent any requests going in that would exceed capacity.
    assign read_axis_valid = app_rd_data_valid;
    assign read_axis_data = app_rd_data;
+   assign read_axis_tuser = (rdout_addr == 0);
          
    // Flip-Flop state behavior (see also combinational)
 
@@ -136,7 +144,7 @@ module traffic_generator
 	      state <= (trigger_btn_sync) ? WAIT_NF_CAM : WAIT_TRIG;
 	   end
 	   WAIT_NF_CAM: begin
-	      state <= (rollover_wr_addr) ? WR_BTB : WAIT_NF_CAM;
+	      state <= (write_axis_tuser) ? WR_BTB : WAIT_NF_CAM;
 	   end
 	   // WAIT_WR: begin
 	   //    // theoretically fully skipping over this state rn..
@@ -147,7 +155,7 @@ module traffic_generator
 	      // frankly this is overly hopeful tho
 	      // state <= rollover_wr_addr ? READ_CMD :
 	      // 	       (write_axis_valid ? WR_BTB : WAIT_WR);
-	      state <= rollover_wr_addr ? READ_CMD : WR_BTB;
+	      state <= (write_axis_tuser) ? READ_CMD : WR_BTB;
 	   end
 	   READ_CMD: begin
 	      state <= READ_CMD; // steady state here ig
@@ -190,7 +198,7 @@ module traffic_generator
 	end
 	WAIT_TRIG, WAIT_NF_CAM, WR_BTB: begin
 	   // app signals
-	   app_addr = wr_addr << 8;
+	   app_addr = wr_addr << 7;
 	   app_cmd = CMD_WRITE;
 	   // app_en = 1'b1;
 	   app_en = write_axis_valid && wdf_ready;
@@ -202,7 +210,7 @@ module traffic_generator
 	   app_wdf_end = write_axis_valid && wdf_ready;
 	end
 	READ_CMD: begin
-	   app_addr = rd_addr << 8;
+	   app_addr = rd_addr << 7;
 	   app_cmd = CMD_READ;
 	   // app_en = 1'b1;
 	   app_en = issue_rd_cmd;

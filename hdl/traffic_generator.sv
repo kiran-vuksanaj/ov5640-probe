@@ -55,20 +55,12 @@ module traffic_generator
    assign app_zq_req = 0;
    assign app_wdf_mask = 16'b0;
 
-   // TODO: update this to match my new combinational version.
    typedef enum {RST,           // X000 / 0,8
-		 WAIT_TRIG,     // X001 / 1,9
-		 WAIT_NF_CAM,   // X010 / 2,A
-		 WAIT_WR,       // X011 / 3,B
-		 WR_BTB,        // X100 / 4,C
-		 READ_CMD       // X101 / 5,D
+		 WAIT_INIT,     // X001 / 1,9
+		 RD_HDMI,   // X010 / 2,A
+		 WR_CAM       // X011 / 3,B
 		 } tg_state;
    tg_state state;
-
-   // typedef enum {FIFO_WAIT,     // 0XXX / 0-6
-   // 		 FIFO_SEND      // 1XXX / 8-E
-   // 		 } rd_state;
-   // rd_state fstate;
 
    assign state_out = {state[2:0]};
    
@@ -90,10 +82,10 @@ module traffic_generator
    logic 	write_ready;
    logic 	wdf_ready;
    assign wdf_ready = app_rdy && app_wdf_rdy;
-   assign write_ready = wdf_ready && (state == WR_BTB || state == WAIT_TRIG || state == WAIT_NF_CAM);
+   assign write_ready = wdf_ready && (state == WR_CAM);
    assign write_axis_ready = write_ready;
 
-   localparam MAX_CMD_QUEUE = 3;
+   localparam MAX_CMD_QUEUE = 8;
    
    logic [26:0] rd_addr;
    logic 	rollover_rd_addr;
@@ -105,7 +97,7 @@ module traffic_generator
    assign addr_diff = rd_addr - rdout_addr;
    
    logic 	issue_rd_cmd;
-   assign issue_rd_cmd = (addr_diff < MAX_CMD_QUEUE) && ~read_axis_af && state == READ_CMD;
+   assign issue_rd_cmd = (addr_diff < MAX_CMD_QUEUE) && ~read_axis_af && state == RD_HDMI;
    
    addr_increment #(.ROLLOVER(1280*720 >> 3)) aira
      (.clk_in(clk_in),
@@ -128,37 +120,32 @@ module traffic_generator
    assign read_axis_valid = app_rd_data_valid;
    assign read_axis_data = app_rd_data;
    assign read_axis_tuser = (rdout_addr == 0);
-         
-   // Flip-Flop state behavior (see also combinational)
 
+
+   // switch between read/write logic:
+   // most simple version, if command can't complete, switch modes.
+   // both states work towards these conditions.
+   // at pretty different rates though, which could cause problems maybe
+   logic 	go_to_wr, go_to_rd;
+   assign go_to_wr = (addr_diff >= MAX_CMD_QUEUE) || read_axis_af;
+   assign go_to_rd = ~write_axis_valid;
+         
    always_ff @(posedge clk_in) begin
       if(rst_in) begin
 	state <= RST;
       end else begin
 	 case(state)
 	   RST: begin
-	      state <= WAIT_TRIG;
+	      state <= WAIT_INIT;
 	   end
-	   WAIT_TRIG: begin
-	      // state <= (trigger_btn_sync) ? WAIT_WR : WAIT_TRIG;
-	      state <= (trigger_btn_sync) ? WAIT_NF_CAM : WAIT_TRIG;
+	   WAIT_INIT: begin
+	      state <= init_calib_complete ? RD_HDMI : WAIT_INIT;
 	   end
-	   WAIT_NF_CAM: begin
-	      state <= (write_axis_tuser) ? WR_BTB : WAIT_NF_CAM;
+	   RD_HDMI: begin
+	      state <= go_to_wr ? WR_CAM : RD_HDMI;
 	   end
-	   // WAIT_WR: begin
-	   //    // theoretically fully skipping over this state rn..
-	   //    state <= wdf_ready ? WR_BTB : WAIT_WR;
-	   // end
-	   WR_BTB: begin
-	      // i think maybe write_axis being valid continues to imply our ready signal?
-	      // frankly this is overly hopeful tho
-	      // state <= rollover_wr_addr ? READ_CMD :
-	      // 	       (write_axis_valid ? WR_BTB : WAIT_WR);
-	      state <= (write_axis_tuser) ? READ_CMD : WR_BTB;
-	   end
-	   READ_CMD: begin
-	      state <= READ_CMD; // steady state here ig
+	   WR_CAM: begin
+	      state <= go_to_rd ? RD_HDMI : WR_CAM; 
 	   end
 	 endcase // case (state)
       end
@@ -186,9 +173,17 @@ module traffic_generator
    /* end temporary stuff */
 
    // Combinational state behavior, for ui app signals
+   // Flip-Flop state behavior (see also combinational)
+   // typedef enum {RST,           // X000 / 0,8
+   // 		 WAIT_INIT,     // X001 / 1,9
+   // 		 RD_HDMI,   // X010 / 2,A
+   // 		 WR_CAM       // X011 / 3,B
+   // 		 } tg_state;
+   // tg_state state;
+
    always_comb begin
       case(state)
-	RST, WAIT_WR: begin
+	RST, WAIT_INIT: begin
 	   app_addr = 0;
 	   app_cmd = 0;
 	   app_en = 0;
@@ -196,7 +191,7 @@ module traffic_generator
 	   app_wdf_end = 0;
 	   app_wdf_wren = 0;
 	end
-	WAIT_TRIG, WAIT_NF_CAM, WR_BTB: begin
+	WR_CAM: begin
 	   // app signals
 	   app_addr = wr_addr << 7;
 	   app_cmd = CMD_WRITE;
@@ -209,7 +204,7 @@ module traffic_generator
 	   // app_wdf_end = 1'b1;
 	   app_wdf_end = write_axis_valid && wdf_ready;
 	end
-	READ_CMD: begin
+	RD_HDMI: begin
 	   app_addr = rd_addr << 7;
 	   app_cmd = CMD_READ;
 	   // app_en = 1'b1;

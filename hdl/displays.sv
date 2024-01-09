@@ -3,8 +3,7 @@
 
 module one_hertz #
   (
-   parameter REF_CLK = 307_200_000
-   // parameter REF_CLK = 192_000_000
+   parameter REF_CLK = 200_000_000
   ) 
    (
     input wire clk_in,
@@ -77,16 +76,25 @@ module display_cycle_count
    output logic [31:0] display_out
    );
 
+   logic [31:0] display_bin;
+   logic [41:0] bcd_full;
+   
+   bin2bcd #(.W(32)) decm
+     (.bin(display_bin),
+      .bcd(bcd_full));
+   assign display_out = {2'b0,bcd_full[41:12]}; // decimal, in thousands
+   // assign display_out = display_bin;
+   
    logic [31:0]        count_cycles;
 
    always_ff @(posedge clk_in) begin
       if (rst_in) begin
-	 display_out <= 32'b0;
+	 display_bin <= 32'b0;
 	 count_cycles <= 0;
       end else begin
 	 if (one_hz_in) begin
 	    count_cycles <= 0;
-	    display_out <= count_cycles;
+	    display_bin <= count_cycles;
 	 end else if (valid_byte_in) begin
 	    count_cycles <= count_cycles + 1;
 	 end
@@ -107,9 +115,16 @@ module display_frame_length
    logic 	       vsync_prev;
    logic [31:0]        count_cycles;
 
+   logic [31:0]	       display_bin;
+   logic [41:0]        bcd_full;
+   bin2bcd #(.W(32)) decm
+     (.bin(display_bin),
+      .bcd(bcd_full));
+   assign display_out = bcd_full[31:0]; // decimal, in thousands
+
    always_ff @(posedge clk_in) begin
       if (rst_in) begin
-	 display_out <= 0;
+	 display_bin <= 0;
 	 count_cycles <= 0;
 	 vsync_prev <= 0;
       end else begin
@@ -118,7 +133,7 @@ module display_frame_length
 
 	    if (vsync_prev && ~vsync_in) begin
 	       count_cycles <= 0;
-	       display_out <= count_cycles;
+	       display_bin <= count_cycles;
 	    end else begin
 	       count_cycles <= count_cycles + 1;
 	    end
@@ -149,7 +164,18 @@ module display_rowlen_fps
 
    logic [15:0]        display_rowlen;
    logic [15:0]        display_fps;
-   assign display_out = {display_fps,display_rowlen};
+
+   logic [20:0]        bcd_cycles;
+   logic [20:0]        bcd_frames;
+   
+   bin2bcd #(.W(16)) decc
+     (.bin(display_rowlen),
+      .bcd(bcd_cycles));
+   bin2bcd #(.W(16)) decf
+     (.bin(display_fps),
+      .bcd(bcd_frames));
+   
+   assign display_out = {bcd_frames[15:0],bcd_cycles[15:0]};
 
    always_ff @(posedge clk_in) begin
       if (rst_in) begin

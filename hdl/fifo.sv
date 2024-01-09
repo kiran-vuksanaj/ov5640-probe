@@ -162,34 +162,4 @@ module addr_increment
    end
 endmodule // addr_increment
 
-module slow_clock_sync #(parameter WIDEN_CYCLES=3)
-   (input wire clk_fast,
-    input wire rst_fast,
-    input wire 	 signal_fast,
-    input wire 	 clk_slow,
-    output logic signal_slow);
-
-   logic [WIDEN_CYCLES-1:0] signal_fast_history;
-   
-   logic 		    signal_wide;
-   assign signal_wide = signal_fast_history > 0;
-   
-   always_ff @(posedge clk_fast) begin
-      if (rst_fast) begin
-	 signal_fast_history <= 0;
-      end else begin
-	 signal_fast_history <= {signal_fast_history[WIDEN_CYCLES-2:0],signal_fast};
-      end
-   end
-
-   logic signal_slow_tmp;
-   always_ff @(posedge clk_slow) begin
-      signal_slow_tmp <= signal_wide;
-      signal_slow <= signal_slow_tmp;
-   end
-endmodule // slow_clock_sync
-
-   
-    
-
 `default_nettype wire

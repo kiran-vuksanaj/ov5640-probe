@@ -1,3 +1,6 @@
+`timescale 1ns / 1ps
+`default_nettype none
+
 module seven_segment_controller #(parameter COUNT_TO = 100000)
    (input wire         clk_in,
     input wire 	       rst_in,
@@ -54,3 +57,24 @@ module seven_segment_controller #(parameter COUNT_TO = 100000)
       end
    end
 endmodule // seven_segment_controller
+
+// Taken from https://en.wikipedia.org/wiki/Double_dabble#Parametric_Verilog_implementation_of_the_double_dabble_binary_to_BCD_converter
+module bin2bcd
+ #( parameter                 W = 18)  // input width
+  ( input  wire [W-1      :0] bin   ,  // binary
+    output reg  [W+(W-4)/3:0] bcd   ); // bcd {...,thousands,hundreds,tens,ones}
+
+  integer i,j;
+
+  always_comb begin
+    for(i = 0; i <= W+(W-4)/3; i = i+1) bcd[i] = 0;     // initialize with zeros
+    bcd[W-1:0] = bin;                                   // initialize with input vector
+    for(i = 0; i <= W-4; i = i+1)                       // iterate on structure depth
+      for(j = 0; j <= i/3; j = j+1)                     // iterate on structure width
+        if (bcd[W-i+4*j -: 4] > 4)                      // if > 4
+          bcd[W-i+4*j -: 4] = bcd[W-i+4*j -: 4] + 4'd3; // add 3
+  end
+
+endmodule
+
+`default_nettype wire

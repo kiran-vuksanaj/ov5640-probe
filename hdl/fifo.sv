@@ -52,7 +52,7 @@ module build_wr_data
 	 if (accept_in) begin
 	    // write data to proper section of phrasedata
 	    words[offset] <= data_in;
-	    tuser_out <= (offset == 0) ? newframe_in : (tuser_out || newframe_in);
+	    tuser_out <= (offset == 0) ? newframe_in : tuser_out;
 	 end
 	 if (offset == 7 || ~phrase_taken) begin
 	    phrase_taken <= ready_out;
@@ -86,7 +86,7 @@ module digest_phrase
    addr_increment #(.ROLLOVER(8)) aio
      (.clk_in(clk_in),
       .rst_in(rst_in),
-      .calib_in(0),
+      .calib_in(1'b0),
       .incr_in( ready_word && valid_word ),
       .addr_out(offset));
 

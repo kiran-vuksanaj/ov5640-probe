@@ -250,13 +250,13 @@ module top_level
    logic 	 phrase_axis_tuser;
    logic 	 ready_builder;
    
-   assign newframe_cc = (hcount_cc <= 1 && vcount_cc == 0);
+   assign newframe_cc = (hcount_cc == 1 && vcount_cc == 0);
    
    build_wr_data
      (.clk_in(clk_camera),
       .rst_in(sys_rst_camera),
       .valid_in(valid_cc),
-      .ready_in(ready_builder), // discard
+      .ready_in(ready_builder), // discarded currently
       // .data_in(pixel_cc_filter),// temporary test value
       .data_in(pixel_cc),
       .newframe_in(newframe_cc),
@@ -664,34 +664,44 @@ module top_level
 
    // ====================== CHAPTER: MANTA PROBE ===================
 
-   // manta connection
-   manta manta_inst
-     (.clk(ui_clk),
-      .rx(uart_rxd),
-      .tx(uart_txd),
-      .tg_state(state), 
-      .app_rdy(app_rdy), 
-      .app_en(app_en),
-      .app_cmd(app_cmd),
-      .app_addr(app_addr[20:0]),
-      .app_wdf_rdy(app_wdf_rdy), 
-      .app_wdf_wren(app_wdf_wren), 
-      .app_wdf_data_slice(app_wdf_data[95:80]), 
-      .app_rd_data_valid(app_rd_data_valid), 
-      .app_rd_data_slice(app_rd_data[95:80]),
-      .app_rd_data_end(app_rd_data_end),
-      .write_axis_smallpile(small_pile), 
-      .read_axis_af(read_axis_af),
-      .write_axis_tuser(write_axis_tuser),
-      .read_axis_tuser(read_axis_tuser),
-      .trigger_btn(trigger_btn_ui)
-      // fb BRAM
-      // .frame_buffer_clk(clk_camera),
-      // .frame_buffer_addr(fb_addr),
-      // .frame_buffer_din(fb_din),
-      // .frame_buffer_dout(fb_dout),
-      // .frame_buffer_we(fb_we)
-      );
+   // manta connection: ui.yaml
+   // manta manta_inst
+   //   (.clk(ui_clk),
+   //    .rx(uart_rxd),
+   //    .tx(uart_txd),
+   //    .tg_state(state), 
+   //    .app_rdy(app_rdy), 
+   //    .app_en(app_en),
+   //    .app_cmd(app_cmd),
+   //    .app_addr(app_addr[20:0]),
+   //    .app_wdf_rdy(app_wdf_rdy), 
+   //    .app_wdf_wren(app_wdf_wren), 
+   //    .app_wdf_data_slice(app_wdf_data[95:80]), 
+   //    .app_rd_data_valid(app_rd_data_valid), 
+   //    .app_rd_data_slice(app_rd_data[95:80]),
+   //    .app_rd_data_end(app_rd_data_end),
+   //    .write_axis_smallpile(small_pile), 
+   //    .read_axis_af(read_axis_af),
+   //    .write_axis_tuser(write_axis_tuser),
+   //    .read_axis_tuser(read_axis_tuser),
+   //    .trigger_btn(trigger_btn_ui));
+
+   // manta connection but on clk_camera: cam.yaml
+   // manta manta_inst 
+   //   (
+   //    .clk(clk_camera),
+
+   //    .rx(uart_rxd),
+   //    .tx(uart_txd),
+      
+   //    .sys_rst_camera(sys_rst_camera), 
+   //    .valid_in(valid_cc), 
+   //    .ready_in(ready_builder), 
+   //    .newframe_in(newframe_cc), 
+   //    .valid_out(phrase_axis_valid), 
+   //    .ready_out(phrase_axis_ready), 
+   //    .tuser_out(phrase_axis_tuser));
+   
    
 endmodule // top_level
 

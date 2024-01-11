@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 11 Jan 2024 at 12:36:08 by kiranv
+This module was generated with Manta v0.0.5 on 11 Jan 2024 at 14:44:12 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -16,22 +16,13 @@ manta manta_inst (
     .rx(rx),
     .tx(tx),
     
-    .tg_state(tg_state), 
-    .app_rdy(app_rdy), 
-    .app_en(app_en), 
-    .app_cmd(app_cmd), 
-    .app_addr(app_addr), 
-    .app_wdf_rdy(app_wdf_rdy), 
-    .app_wdf_wren(app_wdf_wren), 
-    .app_wdf_data_slice(app_wdf_data_slice), 
-    .app_rd_data_valid(app_rd_data_valid), 
-    .app_rd_data_slice(app_rd_data_slice), 
-    .app_rd_data_end(app_rd_data_end), 
-    .write_axis_smallpile(write_axis_smallpile), 
-    .read_axis_af(read_axis_af), 
-    .trigger_btn(trigger_btn), 
-    .write_axis_tuser(write_axis_tuser), 
-    .read_axis_tuser(read_axis_tuser));
+    .valid_in(valid_in), 
+    .ready_in(ready_in), 
+    .newframe_in(newframe_in), 
+    .valid_out(valid_out), 
+    .ready_out(ready_out), 
+    .tuser_out(tuser_out), 
+    .pclk_cam(pclk_cam));
 
 */
 
@@ -41,25 +32,16 @@ module manta (
     input wire rx,
     output reg tx,
     
-    input wire [2:0] tg_state,
-    input wire app_rdy,
-    input wire app_en,
-    input wire [2:0] app_cmd,
-    input wire [20:0] app_addr,
-    input wire app_wdf_rdy,
-    input wire app_wdf_wren,
-    input wire [15:0] app_wdf_data_slice,
-    input wire app_rd_data_valid,
-    input wire [15:0] app_rd_data_slice,
-    input wire app_rd_data_end,
-    input wire write_axis_smallpile,
-    input wire read_axis_af,
-    input wire trigger_btn,
-    input wire write_axis_tuser,
-    input wire read_axis_tuser);
+    input wire valid_in,
+    input wire ready_in,
+    input wire newframe_in,
+    input wire valid_out,
+    input wire ready_out,
+    input wire tuser_out,
+    input wire pclk_cam);
 
 
-    uart_rx #(.CLOCKS_PER_BAUD(27)) urx (
+    uart_rx #(.CLOCKS_PER_BAUD(133)) urx (
         .clk(clk),
         .rx(rx),
     
@@ -93,22 +75,13 @@ module manta (
         .rw_i(brx_cam_logic_analyzer_rw),
         .valid_i(brx_cam_logic_analyzer_valid),
     
-        .tg_state(tg_state),
-        .app_rdy(app_rdy),
-        .app_en(app_en),
-        .app_cmd(app_cmd),
-        .app_addr(app_addr),
-        .app_wdf_rdy(app_wdf_rdy),
-        .app_wdf_wren(app_wdf_wren),
-        .app_wdf_data_slice(app_wdf_data_slice),
-        .app_rd_data_valid(app_rd_data_valid),
-        .app_rd_data_slice(app_rd_data_slice),
-        .app_rd_data_end(app_rd_data_end),
-        .write_axis_smallpile(write_axis_smallpile),
-        .read_axis_af(read_axis_af),
-        .trigger_btn(trigger_btn),
-        .write_axis_tuser(write_axis_tuser),
-        .read_axis_tuser(read_axis_tuser),
+        .valid_in(valid_in),
+        .ready_in(ready_in),
+        .newframe_in(newframe_in),
+        .valid_out(valid_out),
+        .ready_out(ready_out),
+        .tuser_out(tuser_out),
+        .pclk_cam(pclk_cam),
     
         .addr_o(),
         .data_o(cam_logic_analyzer_btx_data),
@@ -134,7 +107,7 @@ module manta (
     reg btx_utx_start;
     reg utx_btx_done;
     
-    uart_tx #(.CLOCKS_PER_BAUD(27)) utx (
+    uart_tx #(.CLOCKS_PER_BAUD(133)) utx (
         .clk(clk),
     
         .data_i(btx_utx_data),
@@ -353,22 +326,13 @@ module logic_analyzer (
     input wire clk,
 
     // probes
-    input wire [2:0] tg_state,
-    input wire app_rdy,
-    input wire app_en,
-    input wire [2:0] app_cmd,
-    input wire [20:0] app_addr,
-    input wire app_wdf_rdy,
-    input wire app_wdf_wren,
-    input wire [15:0] app_wdf_data_slice,
-    input wire app_rd_data_valid,
-    input wire [15:0] app_rd_data_slice,
-    input wire app_rd_data_end,
-    input wire write_axis_smallpile,
-    input wire read_axis_af,
-    input wire trigger_btn,
-    input wire write_axis_tuser,
-    input wire read_axis_tuser,
+    input wire valid_in,
+    input wire ready_in,
+    input wire newframe_in,
+    input wire valid_out,
+    input wire ready_out,
+    input wire tuser_out,
+    input wire pclk_cam,
 
     // input port
     input wire [15:0] addr_i,
@@ -398,9 +362,9 @@ module logic_analyzer (
     reg [ADDR_WIDTH-1:0] bram_addr;
     reg bram_we;
 
-    localparam TOTAL_PROBE_WIDTH = 70;
+    localparam TOTAL_PROBE_WIDTH = 7;
     reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {read_axis_tuser, write_axis_tuser, trigger_btn, read_axis_af, write_axis_smallpile, app_rd_data_end, app_rd_data_slice, app_rd_data_valid, app_wdf_data_slice, app_wdf_wren, app_wdf_rdy, app_addr, app_cmd, app_en, app_rdy, tg_state};
+    assign probes_concat = {pclk_cam, tuser_out, ready_out, valid_out, newframe_in, ready_in, valid_in};
 
     logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
         .clk(clk),
@@ -455,22 +419,13 @@ module logic_analyzer (
     trigger_block #(.BASE_ADDR(7)) trig_blk (
         .clk(clk),
 
-        .tg_state(tg_state),
-        .app_rdy(app_rdy),
-        .app_en(app_en),
-        .app_cmd(app_cmd),
-        .app_addr(app_addr),
-        .app_wdf_rdy(app_wdf_rdy),
-        .app_wdf_wren(app_wdf_wren),
-        .app_wdf_data_slice(app_wdf_data_slice),
-        .app_rd_data_valid(app_rd_data_valid),
-        .app_rd_data_slice(app_rd_data_slice),
-        .app_rd_data_end(app_rd_data_end),
-        .write_axis_smallpile(write_axis_smallpile),
-        .read_axis_af(read_axis_af),
-        .trigger_btn(trigger_btn),
-        .write_axis_tuser(write_axis_tuser),
-        .read_axis_tuser(read_axis_tuser),
+        .valid_in(valid_in),
+        .ready_in(ready_in),
+        .newframe_in(newframe_in),
+        .valid_out(valid_out),
+        .ready_out(ready_out),
+        .tuser_out(tuser_out),
+        .pclk_cam(pclk_cam),
 
         .trig(trig),
 
@@ -491,7 +446,7 @@ module logic_analyzer (
 
     // sample memory
     block_memory #(
-        .BASE_ADDR(39),
+        .BASE_ADDR(21),
         .WIDTH(TOTAL_PROBE_WIDTH),
         .DEPTH(SAMPLE_DEPTH)
         ) block_mem (
@@ -847,22 +802,13 @@ module trigger_block (
     input wire clk,
 
     // probes
-    input wire [2:0] tg_state,
-    input wire app_rdy,
-    input wire app_en,
-    input wire [2:0] app_cmd,
-    input wire [20:0] app_addr,
-    input wire app_wdf_rdy,
-    input wire app_wdf_wren,
-    input wire [15:0] app_wdf_data_slice,
-    input wire app_rd_data_valid,
-    input wire [15:0] app_rd_data_slice,
-    input wire app_rd_data_end,
-    input wire write_axis_smallpile,
-    input wire read_axis_af,
-    input wire trigger_btn,
-    input wire write_axis_tuser,
-    input wire read_axis_tuser,
+    input wire valid_in,
+    input wire ready_in,
+    input wire newframe_in,
+    input wire valid_out,
+    input wire ready_out,
+    input wire tuser_out,
+    input wire pclk_cam,
 
     // trigger
     output reg trig,
@@ -880,190 +826,91 @@ module trigger_block (
     output reg valid_o);
 
     parameter BASE_ADDR = 0;
-    localparam MAX_ADDR = 39;
+    localparam MAX_ADDR = 21;
 
     // trigger configuration registers
     // - each probe gets an operation and a compare register
     // - at the end we OR them all together. along with any custom probes the user specs
 
-    reg [3:0] tg_state_op = 0;
-    reg [2:0] tg_state_arg = 0;
-    reg tg_state_trig;
+    reg [3:0] valid_in_op = 0;
+    reg valid_in_arg = 0;
+    reg valid_in_trig;
     
-    trigger #(.INPUT_WIDTH(3)) tg_state_trigger (
+    trigger #(.INPUT_WIDTH(1)) valid_in_trigger (
         .clk(clk),
     
-        .probe(tg_state),
-        .op(tg_state_op),
-        .arg(tg_state_arg),
-        .trig(tg_state_trig));
-    reg [3:0] app_rdy_op = 0;
-    reg app_rdy_arg = 0;
-    reg app_rdy_trig;
+        .probe(valid_in),
+        .op(valid_in_op),
+        .arg(valid_in_arg),
+        .trig(valid_in_trig));
+    reg [3:0] ready_in_op = 0;
+    reg ready_in_arg = 0;
+    reg ready_in_trig;
     
-    trigger #(.INPUT_WIDTH(1)) app_rdy_trigger (
+    trigger #(.INPUT_WIDTH(1)) ready_in_trigger (
         .clk(clk),
     
-        .probe(app_rdy),
-        .op(app_rdy_op),
-        .arg(app_rdy_arg),
-        .trig(app_rdy_trig));
-    reg [3:0] app_en_op = 0;
-    reg app_en_arg = 0;
-    reg app_en_trig;
+        .probe(ready_in),
+        .op(ready_in_op),
+        .arg(ready_in_arg),
+        .trig(ready_in_trig));
+    reg [3:0] newframe_in_op = 0;
+    reg newframe_in_arg = 0;
+    reg newframe_in_trig;
     
-    trigger #(.INPUT_WIDTH(1)) app_en_trigger (
+    trigger #(.INPUT_WIDTH(1)) newframe_in_trigger (
         .clk(clk),
     
-        .probe(app_en),
-        .op(app_en_op),
-        .arg(app_en_arg),
-        .trig(app_en_trig));
-    reg [3:0] app_cmd_op = 0;
-    reg [2:0] app_cmd_arg = 0;
-    reg app_cmd_trig;
+        .probe(newframe_in),
+        .op(newframe_in_op),
+        .arg(newframe_in_arg),
+        .trig(newframe_in_trig));
+    reg [3:0] valid_out_op = 0;
+    reg valid_out_arg = 0;
+    reg valid_out_trig;
     
-    trigger #(.INPUT_WIDTH(3)) app_cmd_trigger (
+    trigger #(.INPUT_WIDTH(1)) valid_out_trigger (
         .clk(clk),
     
-        .probe(app_cmd),
-        .op(app_cmd_op),
-        .arg(app_cmd_arg),
-        .trig(app_cmd_trig));
-    reg [3:0] app_addr_op = 0;
-    reg [20:0] app_addr_arg = 0;
-    reg app_addr_trig;
+        .probe(valid_out),
+        .op(valid_out_op),
+        .arg(valid_out_arg),
+        .trig(valid_out_trig));
+    reg [3:0] ready_out_op = 0;
+    reg ready_out_arg = 0;
+    reg ready_out_trig;
     
-    trigger #(.INPUT_WIDTH(21)) app_addr_trigger (
+    trigger #(.INPUT_WIDTH(1)) ready_out_trigger (
         .clk(clk),
     
-        .probe(app_addr),
-        .op(app_addr_op),
-        .arg(app_addr_arg),
-        .trig(app_addr_trig));
-    reg [3:0] app_wdf_rdy_op = 0;
-    reg app_wdf_rdy_arg = 0;
-    reg app_wdf_rdy_trig;
+        .probe(ready_out),
+        .op(ready_out_op),
+        .arg(ready_out_arg),
+        .trig(ready_out_trig));
+    reg [3:0] tuser_out_op = 0;
+    reg tuser_out_arg = 0;
+    reg tuser_out_trig;
     
-    trigger #(.INPUT_WIDTH(1)) app_wdf_rdy_trigger (
+    trigger #(.INPUT_WIDTH(1)) tuser_out_trigger (
         .clk(clk),
     
-        .probe(app_wdf_rdy),
-        .op(app_wdf_rdy_op),
-        .arg(app_wdf_rdy_arg),
-        .trig(app_wdf_rdy_trig));
-    reg [3:0] app_wdf_wren_op = 0;
-    reg app_wdf_wren_arg = 0;
-    reg app_wdf_wren_trig;
+        .probe(tuser_out),
+        .op(tuser_out_op),
+        .arg(tuser_out_arg),
+        .trig(tuser_out_trig));
+    reg [3:0] pclk_cam_op = 0;
+    reg pclk_cam_arg = 0;
+    reg pclk_cam_trig;
     
-    trigger #(.INPUT_WIDTH(1)) app_wdf_wren_trigger (
+    trigger #(.INPUT_WIDTH(1)) pclk_cam_trigger (
         .clk(clk),
     
-        .probe(app_wdf_wren),
-        .op(app_wdf_wren_op),
-        .arg(app_wdf_wren_arg),
-        .trig(app_wdf_wren_trig));
-    reg [3:0] app_wdf_data_slice_op = 0;
-    reg [15:0] app_wdf_data_slice_arg = 0;
-    reg app_wdf_data_slice_trig;
-    
-    trigger #(.INPUT_WIDTH(16)) app_wdf_data_slice_trigger (
-        .clk(clk),
-    
-        .probe(app_wdf_data_slice),
-        .op(app_wdf_data_slice_op),
-        .arg(app_wdf_data_slice_arg),
-        .trig(app_wdf_data_slice_trig));
-    reg [3:0] app_rd_data_valid_op = 0;
-    reg app_rd_data_valid_arg = 0;
-    reg app_rd_data_valid_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) app_rd_data_valid_trigger (
-        .clk(clk),
-    
-        .probe(app_rd_data_valid),
-        .op(app_rd_data_valid_op),
-        .arg(app_rd_data_valid_arg),
-        .trig(app_rd_data_valid_trig));
-    reg [3:0] app_rd_data_slice_op = 0;
-    reg [15:0] app_rd_data_slice_arg = 0;
-    reg app_rd_data_slice_trig;
-    
-    trigger #(.INPUT_WIDTH(16)) app_rd_data_slice_trigger (
-        .clk(clk),
-    
-        .probe(app_rd_data_slice),
-        .op(app_rd_data_slice_op),
-        .arg(app_rd_data_slice_arg),
-        .trig(app_rd_data_slice_trig));
-    reg [3:0] app_rd_data_end_op = 0;
-    reg app_rd_data_end_arg = 0;
-    reg app_rd_data_end_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) app_rd_data_end_trigger (
-        .clk(clk),
-    
-        .probe(app_rd_data_end),
-        .op(app_rd_data_end_op),
-        .arg(app_rd_data_end_arg),
-        .trig(app_rd_data_end_trig));
-    reg [3:0] write_axis_smallpile_op = 0;
-    reg write_axis_smallpile_arg = 0;
-    reg write_axis_smallpile_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) write_axis_smallpile_trigger (
-        .clk(clk),
-    
-        .probe(write_axis_smallpile),
-        .op(write_axis_smallpile_op),
-        .arg(write_axis_smallpile_arg),
-        .trig(write_axis_smallpile_trig));
-    reg [3:0] read_axis_af_op = 0;
-    reg read_axis_af_arg = 0;
-    reg read_axis_af_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) read_axis_af_trigger (
-        .clk(clk),
-    
-        .probe(read_axis_af),
-        .op(read_axis_af_op),
-        .arg(read_axis_af_arg),
-        .trig(read_axis_af_trig));
-    reg [3:0] trigger_btn_op = 0;
-    reg trigger_btn_arg = 0;
-    reg trigger_btn_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) trigger_btn_trigger (
-        .clk(clk),
-    
-        .probe(trigger_btn),
-        .op(trigger_btn_op),
-        .arg(trigger_btn_arg),
-        .trig(trigger_btn_trig));
-    reg [3:0] write_axis_tuser_op = 0;
-    reg write_axis_tuser_arg = 0;
-    reg write_axis_tuser_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) write_axis_tuser_trigger (
-        .clk(clk),
-    
-        .probe(write_axis_tuser),
-        .op(write_axis_tuser_op),
-        .arg(write_axis_tuser_arg),
-        .trig(write_axis_tuser_trig));
-    reg [3:0] read_axis_tuser_op = 0;
-    reg read_axis_tuser_arg = 0;
-    reg read_axis_tuser_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) read_axis_tuser_trigger (
-        .clk(clk),
-    
-        .probe(read_axis_tuser),
-        .op(read_axis_tuser_op),
-        .arg(read_axis_tuser_arg),
-        .trig(read_axis_tuser_trig));
+        .probe(pclk_cam),
+        .op(pclk_cam_op),
+        .arg(pclk_cam_arg),
+        .trig(pclk_cam_trig));
 
-   assign trig = tg_state_trig || app_rdy_trig || app_en_trig || app_cmd_trig || app_addr_trig || app_wdf_rdy_trig || app_wdf_wren_trig || app_wdf_data_slice_trig || app_rd_data_valid_trig || app_rd_data_slice_trig || app_rd_data_end_trig || write_axis_smallpile_trig || read_axis_af_trig || trigger_btn_trig || write_axis_tuser_trig || read_axis_tuser_trig;
+   assign trig = valid_in_trig || ready_in_trig || newframe_in_trig || valid_out_trig || ready_out_trig || tuser_out_trig || pclk_cam_trig;
 
     // perform register operations
     always @(posedge clk) begin
@@ -1077,76 +924,40 @@ module trigger_block (
             // reads
             if(valid_i && !rw_i) begin
                 case (addr_i)
-                    BASE_ADDR + 0: data_o <= tg_state_op;
-                    BASE_ADDR + 1: data_o <= tg_state_arg;
-                    BASE_ADDR + 2: data_o <= app_rdy_op;
-                    BASE_ADDR + 3: data_o <= app_rdy_arg;
-                    BASE_ADDR + 4: data_o <= app_en_op;
-                    BASE_ADDR + 5: data_o <= app_en_arg;
-                    BASE_ADDR + 6: data_o <= app_cmd_op;
-                    BASE_ADDR + 7: data_o <= app_cmd_arg;
-                    BASE_ADDR + 8: data_o <= app_addr_op;
-                    BASE_ADDR + 9: data_o <= app_addr_arg;
-                    BASE_ADDR + 10: data_o <= app_wdf_rdy_op;
-                    BASE_ADDR + 11: data_o <= app_wdf_rdy_arg;
-                    BASE_ADDR + 12: data_o <= app_wdf_wren_op;
-                    BASE_ADDR + 13: data_o <= app_wdf_wren_arg;
-                    BASE_ADDR + 14: data_o <= app_wdf_data_slice_op;
-                    BASE_ADDR + 15: data_o <= app_wdf_data_slice_arg;
-                    BASE_ADDR + 16: data_o <= app_rd_data_valid_op;
-                    BASE_ADDR + 17: data_o <= app_rd_data_valid_arg;
-                    BASE_ADDR + 18: data_o <= app_rd_data_slice_op;
-                    BASE_ADDR + 19: data_o <= app_rd_data_slice_arg;
-                    BASE_ADDR + 20: data_o <= app_rd_data_end_op;
-                    BASE_ADDR + 21: data_o <= app_rd_data_end_arg;
-                    BASE_ADDR + 22: data_o <= write_axis_smallpile_op;
-                    BASE_ADDR + 23: data_o <= write_axis_smallpile_arg;
-                    BASE_ADDR + 24: data_o <= read_axis_af_op;
-                    BASE_ADDR + 25: data_o <= read_axis_af_arg;
-                    BASE_ADDR + 26: data_o <= trigger_btn_op;
-                    BASE_ADDR + 27: data_o <= trigger_btn_arg;
-                    BASE_ADDR + 28: data_o <= write_axis_tuser_op;
-                    BASE_ADDR + 29: data_o <= write_axis_tuser_arg;
-                    BASE_ADDR + 30: data_o <= read_axis_tuser_op;
-                    BASE_ADDR + 31: data_o <= read_axis_tuser_arg;
+                    BASE_ADDR + 0: data_o <= valid_in_op;
+                    BASE_ADDR + 1: data_o <= valid_in_arg;
+                    BASE_ADDR + 2: data_o <= ready_in_op;
+                    BASE_ADDR + 3: data_o <= ready_in_arg;
+                    BASE_ADDR + 4: data_o <= newframe_in_op;
+                    BASE_ADDR + 5: data_o <= newframe_in_arg;
+                    BASE_ADDR + 6: data_o <= valid_out_op;
+                    BASE_ADDR + 7: data_o <= valid_out_arg;
+                    BASE_ADDR + 8: data_o <= ready_out_op;
+                    BASE_ADDR + 9: data_o <= ready_out_arg;
+                    BASE_ADDR + 10: data_o <= tuser_out_op;
+                    BASE_ADDR + 11: data_o <= tuser_out_arg;
+                    BASE_ADDR + 12: data_o <= pclk_cam_op;
+                    BASE_ADDR + 13: data_o <= pclk_cam_arg;
                 endcase
             end
 
             // writes
             else if(valid_i && rw_i) begin
                 case (addr_i)
-                    BASE_ADDR + 0: tg_state_op <= data_i;
-                    BASE_ADDR + 1: tg_state_arg <= data_i;
-                    BASE_ADDR + 2: app_rdy_op <= data_i;
-                    BASE_ADDR + 3: app_rdy_arg <= data_i;
-                    BASE_ADDR + 4: app_en_op <= data_i;
-                    BASE_ADDR + 5: app_en_arg <= data_i;
-                    BASE_ADDR + 6: app_cmd_op <= data_i;
-                    BASE_ADDR + 7: app_cmd_arg <= data_i;
-                    BASE_ADDR + 8: app_addr_op <= data_i;
-                    BASE_ADDR + 9: app_addr_arg <= data_i;
-                    BASE_ADDR + 10: app_wdf_rdy_op <= data_i;
-                    BASE_ADDR + 11: app_wdf_rdy_arg <= data_i;
-                    BASE_ADDR + 12: app_wdf_wren_op <= data_i;
-                    BASE_ADDR + 13: app_wdf_wren_arg <= data_i;
-                    BASE_ADDR + 14: app_wdf_data_slice_op <= data_i;
-                    BASE_ADDR + 15: app_wdf_data_slice_arg <= data_i;
-                    BASE_ADDR + 16: app_rd_data_valid_op <= data_i;
-                    BASE_ADDR + 17: app_rd_data_valid_arg <= data_i;
-                    BASE_ADDR + 18: app_rd_data_slice_op <= data_i;
-                    BASE_ADDR + 19: app_rd_data_slice_arg <= data_i;
-                    BASE_ADDR + 20: app_rd_data_end_op <= data_i;
-                    BASE_ADDR + 21: app_rd_data_end_arg <= data_i;
-                    BASE_ADDR + 22: write_axis_smallpile_op <= data_i;
-                    BASE_ADDR + 23: write_axis_smallpile_arg <= data_i;
-                    BASE_ADDR + 24: read_axis_af_op <= data_i;
-                    BASE_ADDR + 25: read_axis_af_arg <= data_i;
-                    BASE_ADDR + 26: trigger_btn_op <= data_i;
-                    BASE_ADDR + 27: trigger_btn_arg <= data_i;
-                    BASE_ADDR + 28: write_axis_tuser_op <= data_i;
-                    BASE_ADDR + 29: write_axis_tuser_arg <= data_i;
-                    BASE_ADDR + 30: read_axis_tuser_op <= data_i;
-                    BASE_ADDR + 31: read_axis_tuser_arg <= data_i;
+                    BASE_ADDR + 0: valid_in_op <= data_i;
+                    BASE_ADDR + 1: valid_in_arg <= data_i;
+                    BASE_ADDR + 2: ready_in_op <= data_i;
+                    BASE_ADDR + 3: ready_in_arg <= data_i;
+                    BASE_ADDR + 4: newframe_in_op <= data_i;
+                    BASE_ADDR + 5: newframe_in_arg <= data_i;
+                    BASE_ADDR + 6: valid_out_op <= data_i;
+                    BASE_ADDR + 7: valid_out_arg <= data_i;
+                    BASE_ADDR + 8: ready_out_op <= data_i;
+                    BASE_ADDR + 9: ready_out_arg <= data_i;
+                    BASE_ADDR + 10: tuser_out_op <= data_i;
+                    BASE_ADDR + 11: tuser_out_arg <= data_i;
+                    BASE_ADDR + 12: pclk_cam_op <= data_i;
+                    BASE_ADDR + 13: pclk_cam_arg <= data_i;
                 endcase
             end
         end

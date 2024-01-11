@@ -55,7 +55,7 @@ module build_data_tb;
 
       valid_in = 1;
       data_in = 16'hABCD;
-      newframe_in = 1;
+      newframe_in = 0;
       #10;
       valid_in = 0;
       newframe_in = 0;
@@ -135,7 +135,11 @@ module build_data_tb;
 
       valid_in = 1;
       data_in = 16'h4444;
+      #100;
+      newframe_in = 1;
+      data_in = 16'h5555;
       #10;
+      newframe_in = 0;
       #200;
 
       $display("sim complete");

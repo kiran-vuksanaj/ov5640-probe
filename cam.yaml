@@ -5,17 +5,17 @@ cores:
     type: logic_analyzer
     sample_depth: 8192
     probes:
-      sys_rst_camera: 1
       valid_in: 1
       ready_in: 1
       newframe_in: 1
       valid_out: 1
       ready_out: 1
       tuser_out: 1
+      pclk_cam: 1
 
     trigger_loc: 20
     triggers:
-      - tuser_out RISING
+      - pclk_cam RISING
 
   # frame_buffer:
   #   type: block_memory

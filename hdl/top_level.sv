@@ -250,7 +250,7 @@ module top_level
    logic 	 phrase_axis_tuser;
    logic 	 ready_builder;
    
-   assign newframe_cc = (hcount_cc == 1 && vcount_cc == 0);
+   assign newframe_cc = (hcount_cc <= 1 && vcount_cc == 0);
    
    build_wr_data
      (.clk_in(clk_camera),
@@ -506,9 +506,8 @@ module top_level
    assign led[15:3] = {state[1:0], // 15:14
 		       sys_rst_camera, sys_rst_ui, sys_rst_pixel, // 13:11
 		       trigger_btn_camera, trigger_btn_ui, trigger_btn_pixel, // 10:8
-		       hdmi_axis_valid, read_axis_ready, // 7:6
-		       write_axis_valid, phrase_axis_ready, // 5:4
-		       1'b0 // 3
+		       valid_cc, newframe_cc, phrase_axis_tuser, // 7:5
+		       2'b0 // 4:3
 		       };
     
    ddr3_mig ddr3_mig_inst 
@@ -564,15 +563,10 @@ module top_level
    // assign red = 8'hFF;
    // assign green = 8'h77;
    // assign blue = 8'hAA;
+
+   // hold ready signal low until newframe_hdmi
    assign hdmi_pixel_ready = active_draw_hdmi && ( ~hdmi_pixel_nf || (vcount_hdmi == 0 && hcount_hdmi == 0));
-   // logic [15:0] hdmi_pixel_hold;
-   // always_ff @(posedge clk_pixel) begin
-   //    if (sys_rst_pixel) begin
-   // 	 hdmi_pixel_hold <= 24'h000000;
-   //    end else begin
-   // 	 hdmi_pixel_hold <= (hdmi_pixel_ready && hdmi_pixel_valid) ? hdmi_pixel : hdmi_pixel_hold;
-   //    end
-   // end
+
    assign red = hdmi_pixel_valid ? {hdmi_pixel[15:11],3'b0} : 8'hFF;
    assign green = hdmi_pixel_valid ? {hdmi_pixel[10:5],2'b0} : 8'h77;
    assign blue = hdmi_pixel_valid ? {hdmi_pixel[4:0],3'b0} : 8'hAA;
@@ -694,13 +688,13 @@ module top_level
    //    .rx(uart_rxd),
    //    .tx(uart_txd),
       
-   //    .sys_rst_camera(sys_rst_camera), 
    //    .valid_in(valid_cc), 
    //    .ready_in(ready_builder), 
    //    .newframe_in(newframe_cc), 
    //    .valid_out(phrase_axis_valid), 
    //    .ready_out(phrase_axis_ready), 
-   //    .tuser_out(phrase_axis_tuser));
+   //    .tuser_out(phrase_axis_tuser),
+   //    .pclk_cam(pmodb_buf[0]));
    
    
 endmodule // top_level

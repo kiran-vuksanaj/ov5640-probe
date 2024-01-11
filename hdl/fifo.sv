@@ -22,7 +22,7 @@ module build_wr_data
    logic [2:0] 		 offset;
    logic 		 offset_rollover;
    logic 		 phrase_taken;
-   
+      
    assign data_out = {words[0],
 		      words[1],
 		      words[2],
@@ -35,7 +35,7 @@ module build_wr_data
    addr_increment #(.ROLLOVER(8)) aio
      (.clk_in(clk_in),
       .rst_in(rst_in),
-      .calib_in(newframe_in),
+      .calib_in(newframe_in && accept_in),
       .incr_in(accept_in),
       .addr_out(offset),
       .rollover_out(offset_rollover));
@@ -43,7 +43,7 @@ module build_wr_data
    assign ready_in = phrase_taken;
    assign accept_in = ready_in && valid_in;
    assign valid_out = (offset_rollover) || ~phrase_taken;
-
+   
    always_ff @(posedge clk_in) begin
       if (rst_in) begin
 	 phrase_taken <= 1'b1;
@@ -52,7 +52,7 @@ module build_wr_data
 	 if (accept_in) begin
 	    // write data to proper section of phrasedata
 	    words[offset] <= data_in;
-	    tuser_out <= (offset == 0) ? newframe_in : tuser_out;
+	    tuser_out <= (offset == 0) ? newframe_in : (newframe_in || tuser_out);
 	 end
 	 if (offset == 7 || ~phrase_taken) begin
 	    phrase_taken <= ready_out;

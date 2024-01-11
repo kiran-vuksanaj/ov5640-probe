@@ -53,9 +53,9 @@ module build_data_tb;
       newframe_in = 0;
       #10;
 
+      newframe_in = 1;
       valid_in = 1;
       data_in = 16'hABCD;
-      newframe_in = 0;
       #10;
       valid_in = 0;
       newframe_in = 0;

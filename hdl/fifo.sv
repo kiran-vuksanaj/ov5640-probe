@@ -35,6 +35,7 @@ module build_wr_data
    addr_increment #(.ROLLOVER(8)) aio
      (.clk_in(clk_in),
       .rst_in(rst_in),
+      .calib_in(newframe_in),
       .incr_in(accept_in),
       .addr_out(offset),
       .rollover_out(offset_rollover));
@@ -85,6 +86,7 @@ module digest_phrase
    addr_increment #(.ROLLOVER(8)) aio
      (.clk_in(clk_in),
       .rst_in(rst_in),
+      .calib_in(0),
       .incr_in( ready_word && valid_word ),
       .addr_out(offset));
 
@@ -135,29 +137,34 @@ module addr_increment
     parameter INCR_AMT = 1
     )
    (
-    input wire clk_in,
-    input wire rst_in,
-    input wire incr_in,
+    input wire 				clk_in,
+    input wire 				rst_in,
+    input wire 				calib_in,
+    input wire 				incr_in,
     output logic [$clog2(ROLLOVER)-1:0] addr_out,
-    output logic rollover_out
+    output logic 			rollover_out
     );
 
    // for each cycle that incr_in is high, increment address register--never reach rollover, turn it back to 0.
+   // ON THE CYCLE THAT calib_in is cycled,
+   // (so it probably needs to be a little combinational)
    
    logic [$clog2(ROLLOVER):0] 		next_addr; // deliberately include extra bit!
-   assign next_addr = addr_out + INCR_AMT;
+
+   assign addr_out = calib_in ? RST_ADDR : next_addr;
 
    always @(posedge clk_in) begin
       if (rst_in) begin
-	 addr_out <= RST_ADDR;
+	 next_addr <= RST_ADDR;
 	 rollover_out <= 0;
+      end else if (calib_in) begin
+	 next_addr <= RST_ADDR + INCR_AMT;
+	 rollover_out <= 0;
+      end else if (incr_in) begin
+	 next_addr <= (next_addr+INCR_AMT >= ROLLOVER) ? 0 : next_addr+INCR_AMT;
+	 rollover_out <= next_addr+INCR_AMT >= ROLLOVER || next_addr+INCR_AMT==0;
       end else begin
-	 if (incr_in) begin
-	    addr_out <= (next_addr >= ROLLOVER) ? 0 : next_addr;
-	    rollover_out <= next_addr >= ROLLOVER || next_addr==0;
-	 end else begin
-	    rollover_out <= 0;
-	 end
+	 rollover_out <= 0;
       end
    end
 endmodule // addr_increment

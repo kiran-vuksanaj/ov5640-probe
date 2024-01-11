@@ -64,20 +64,19 @@ module traffic_generator
 
    assign state_out = {state[2:0]};
    
-   logic [26:0] wr_addr_incr;
    logic [26:0] wr_addr;
    logic 	rollover_wr_addr;
    
    addr_increment #(.ROLLOVER(1280*720 >> 3)) aiwa
      (.clk_in(clk_in),
-      .rst_in(rst_in || (write_axis_valid && write_axis_tuser)),
+      .rst_in(rst_in),
+      .calib_in( (write_axis_valid && write_axis_tuser) ),
       .incr_in( write_ready && app_en ),
-      .addr_out( wr_addr_incr ),
+      .addr_out( wr_addr ),
       .rollover_out(rollover_wr_addr));
 
    // get instant combinational logic for when a new frame is indicated
    // (this feels jank)
-   assign wr_addr = (write_axis_valid && write_axis_tuser) ? 0 : wr_addr_incr + 1;
    
    logic 	write_ready;
    logic 	wdf_ready;
@@ -103,6 +102,7 @@ module traffic_generator
      (.clk_in(clk_in),
       .rst_in(rst_in),
       .incr_in( issue_rd_cmd && app_rdy ),
+      .calib_in(0),
       .addr_out(rd_addr),
       .rollover_out(rollover_rd_addr));
 
@@ -110,6 +110,7 @@ module traffic_generator
      (.clk_in(clk_in),
       .rst_in(rst_in),
       .incr_in( app_rd_data_valid ),
+      .calib_in(0),
       .addr_out( rdout_addr ),
       .rollover_out( rollover_rdout_addr ));
          

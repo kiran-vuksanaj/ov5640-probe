@@ -9,13 +9,13 @@ SET_PREFERENCE package csga324
 SET_PREFERENCE verilogsim true
 SET_PREFERENCE vhdlsim false
 SET_PREFERENCE designentry Verilog
-SET_PREFERENCE outputdirectory /home/kiranv/Documents/fpga/ov5640_probe/ip/ddr3_mig/ip/ddr3_mig/_tmp/
-SET_PREFERENCE subworkingdirectory /home/kiranv/Documents/fpga/ov5640_probe/ip/ddr3_mig/ip/ddr3_mig/_tmp/
+SET_PREFERENCE outputdirectory /home/kiranv/Documents/fpga/ov5640-probe/ip/ddr3_mig/ip/ddr3_mig/_tmp/
+SET_PREFERENCE subworkingdirectory /home/kiranv/Documents/fpga/ov5640-probe/ip/ddr3_mig/ip/ddr3_mig/_tmp/
 SET_PREFERENCE flowvendor Other
 SET_PREFERENCE tool vivado
 SET_PREFERENCE compnamestatus 0
 SET_PARAMETER component_name ddr3_mig
-SET_PARAMETER xml_input_file /home/kiranv/Documents/fpga/ov5640_probe/ip/ddr3_mig/ddr3_mig.prj
+SET_PARAMETER xml_input_file /home/kiranv/Documents/fpga/ov5640-probe/ip/ddr3_mig/ddr3_mig.prj
 SET_PARAMETER data_dir_path /tools/Xilinx/Vivado/2023.1/data/ip/xilinx/mig_7series_v4_2
 SET_CORE_NAME Memory Interface Generator (MIG 7 Series)
 SET_CORE_VERSION 4.2

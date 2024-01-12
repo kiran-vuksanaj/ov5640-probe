@@ -289,7 +289,7 @@ module top_level
    logic [31:0] display_frame_length;
    logic [31:0] display_rowlen_fps;
    
-   one_hertz #(.REF_CLK(400_000_000)) ohm 
+   one_hertz #(.REF_CLK(200_000_000)) ohm 
      (.clk_in(clk_camera),
       .rst_in(sys_rst_camera),
       .one_hz_out(one_hz)

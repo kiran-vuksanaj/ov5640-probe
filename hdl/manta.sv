@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 11 Jan 2024 at 14:44:12 by kiranv
+This module was generated with Manta v0.0.5 on 15 Jan 2024 at 18:19:35 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -16,13 +16,29 @@ manta manta_inst (
     .rx(rx),
     .tx(tx),
     
-    .valid_in(valid_in), 
-    .ready_in(ready_in), 
-    .newframe_in(newframe_in), 
-    .valid_out(valid_out), 
-    .ready_out(ready_out), 
-    .tuser_out(tuser_out), 
-    .pclk_cam(pclk_cam));
+    .tg_state(tg_state), 
+    .fstate(fstate), 
+    .app_rdy(app_rdy), 
+    .app_en(app_en), 
+    .app_cmd(app_cmd), 
+    .app_addr(app_addr), 
+    .app_wdf_rdy(app_wdf_rdy), 
+    .app_wdf_wren(app_wdf_wren), 
+    .app_rd_data_valid(app_rd_data_valid), 
+    .app_rd_data_valid_hold(app_rd_data_valid_hold), 
+    .read_axis_af(read_axis_af), 
+    .iir_axis_af(iir_axis_af), 
+    .full(full), 
+    .empty(empty), 
+    .rdout_type(rdout_type), 
+    .rd_type(rd_type), 
+    .read_axis_tuser(read_axis_tuser), 
+    .iir_axis_tuser(iir_axis_tuser), 
+    .hdmi_addr_diff(hdmi_addr_diff), 
+    .iir_addr_diff(iir_addr_diff), 
+    .had_big(had_big), 
+    .iad_big(iad_big), 
+    .trigger_btn(trigger_btn));
 
 */
 
@@ -32,16 +48,32 @@ module manta (
     input wire rx,
     output reg tx,
     
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam);
+    input wire [2:0] tg_state,
+    input wire fstate,
+    input wire app_rdy,
+    input wire app_en,
+    input wire [2:0] app_cmd,
+    input wire [20:0] app_addr,
+    input wire app_wdf_rdy,
+    input wire app_wdf_wren,
+    input wire app_rd_data_valid,
+    input wire app_rd_data_valid_hold,
+    input wire read_axis_af,
+    input wire iir_axis_af,
+    input wire full,
+    input wire empty,
+    input wire rdout_type,
+    input wire rd_type,
+    input wire read_axis_tuser,
+    input wire iir_axis_tuser,
+    input wire [7:0] hdmi_addr_diff,
+    input wire [7:0] iir_addr_diff,
+    input wire had_big,
+    input wire iad_big,
+    input wire trigger_btn);
 
 
-    uart_rx #(.CLOCKS_PER_BAUD(133)) urx (
+    uart_rx #(.CLOCKS_PER_BAUD(27)) urx (
         .clk(clk),
         .rx(rx),
     
@@ -75,13 +107,29 @@ module manta (
         .rw_i(brx_cam_logic_analyzer_rw),
         .valid_i(brx_cam_logic_analyzer_valid),
     
-        .valid_in(valid_in),
-        .ready_in(ready_in),
-        .newframe_in(newframe_in),
-        .valid_out(valid_out),
-        .ready_out(ready_out),
-        .tuser_out(tuser_out),
-        .pclk_cam(pclk_cam),
+        .tg_state(tg_state),
+        .fstate(fstate),
+        .app_rdy(app_rdy),
+        .app_en(app_en),
+        .app_cmd(app_cmd),
+        .app_addr(app_addr),
+        .app_wdf_rdy(app_wdf_rdy),
+        .app_wdf_wren(app_wdf_wren),
+        .app_rd_data_valid(app_rd_data_valid),
+        .app_rd_data_valid_hold(app_rd_data_valid_hold),
+        .read_axis_af(read_axis_af),
+        .iir_axis_af(iir_axis_af),
+        .full(full),
+        .empty(empty),
+        .rdout_type(rdout_type),
+        .rd_type(rd_type),
+        .read_axis_tuser(read_axis_tuser),
+        .iir_axis_tuser(iir_axis_tuser),
+        .hdmi_addr_diff(hdmi_addr_diff),
+        .iir_addr_diff(iir_addr_diff),
+        .had_big(had_big),
+        .iad_big(iad_big),
+        .trigger_btn(trigger_btn),
     
         .addr_o(),
         .data_o(cam_logic_analyzer_btx_data),
@@ -107,7 +155,7 @@ module manta (
     reg btx_utx_start;
     reg utx_btx_done;
     
-    uart_tx #(.CLOCKS_PER_BAUD(133)) utx (
+    uart_tx #(.CLOCKS_PER_BAUD(27)) utx (
         .clk(clk),
     
         .data_i(btx_utx_data),
@@ -326,13 +374,29 @@ module logic_analyzer (
     input wire clk,
 
     // probes
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam,
+    input wire [2:0] tg_state,
+    input wire fstate,
+    input wire app_rdy,
+    input wire app_en,
+    input wire [2:0] app_cmd,
+    input wire [20:0] app_addr,
+    input wire app_wdf_rdy,
+    input wire app_wdf_wren,
+    input wire app_rd_data_valid,
+    input wire app_rd_data_valid_hold,
+    input wire read_axis_af,
+    input wire iir_axis_af,
+    input wire full,
+    input wire empty,
+    input wire rdout_type,
+    input wire rd_type,
+    input wire read_axis_tuser,
+    input wire iir_axis_tuser,
+    input wire [7:0] hdmi_addr_diff,
+    input wire [7:0] iir_addr_diff,
+    input wire had_big,
+    input wire iad_big,
+    input wire trigger_btn,
 
     // input port
     input wire [15:0] addr_i,
@@ -362,9 +426,9 @@ module logic_analyzer (
     reg [ADDR_WIDTH-1:0] bram_addr;
     reg bram_we;
 
-    localparam TOTAL_PROBE_WIDTH = 7;
+    localparam TOTAL_PROBE_WIDTH = 61;
     reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {pclk_cam, tuser_out, ready_out, valid_out, newframe_in, ready_in, valid_in};
+    assign probes_concat = {trigger_btn, iad_big, had_big, iir_addr_diff, hdmi_addr_diff, iir_axis_tuser, read_axis_tuser, rd_type, rdout_type, empty, full, iir_axis_af, read_axis_af, app_rd_data_valid_hold, app_rd_data_valid, app_wdf_wren, app_wdf_rdy, app_addr, app_cmd, app_en, app_rdy, fstate, tg_state};
 
     logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
         .clk(clk),
@@ -419,13 +483,29 @@ module logic_analyzer (
     trigger_block #(.BASE_ADDR(7)) trig_blk (
         .clk(clk),
 
-        .valid_in(valid_in),
-        .ready_in(ready_in),
-        .newframe_in(newframe_in),
-        .valid_out(valid_out),
-        .ready_out(ready_out),
-        .tuser_out(tuser_out),
-        .pclk_cam(pclk_cam),
+        .tg_state(tg_state),
+        .fstate(fstate),
+        .app_rdy(app_rdy),
+        .app_en(app_en),
+        .app_cmd(app_cmd),
+        .app_addr(app_addr),
+        .app_wdf_rdy(app_wdf_rdy),
+        .app_wdf_wren(app_wdf_wren),
+        .app_rd_data_valid(app_rd_data_valid),
+        .app_rd_data_valid_hold(app_rd_data_valid_hold),
+        .read_axis_af(read_axis_af),
+        .iir_axis_af(iir_axis_af),
+        .full(full),
+        .empty(empty),
+        .rdout_type(rdout_type),
+        .rd_type(rd_type),
+        .read_axis_tuser(read_axis_tuser),
+        .iir_axis_tuser(iir_axis_tuser),
+        .hdmi_addr_diff(hdmi_addr_diff),
+        .iir_addr_diff(iir_addr_diff),
+        .had_big(had_big),
+        .iad_big(iad_big),
+        .trigger_btn(trigger_btn),
 
         .trig(trig),
 
@@ -446,7 +526,7 @@ module logic_analyzer (
 
     // sample memory
     block_memory #(
-        .BASE_ADDR(21),
+        .BASE_ADDR(53),
         .WIDTH(TOTAL_PROBE_WIDTH),
         .DEPTH(SAMPLE_DEPTH)
         ) block_mem (
@@ -802,13 +882,29 @@ module trigger_block (
     input wire clk,
 
     // probes
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam,
+    input wire [2:0] tg_state,
+    input wire fstate,
+    input wire app_rdy,
+    input wire app_en,
+    input wire [2:0] app_cmd,
+    input wire [20:0] app_addr,
+    input wire app_wdf_rdy,
+    input wire app_wdf_wren,
+    input wire app_rd_data_valid,
+    input wire app_rd_data_valid_hold,
+    input wire read_axis_af,
+    input wire iir_axis_af,
+    input wire full,
+    input wire empty,
+    input wire rdout_type,
+    input wire rd_type,
+    input wire read_axis_tuser,
+    input wire iir_axis_tuser,
+    input wire [7:0] hdmi_addr_diff,
+    input wire [7:0] iir_addr_diff,
+    input wire had_big,
+    input wire iad_big,
+    input wire trigger_btn,
 
     // trigger
     output reg trig,
@@ -826,91 +922,267 @@ module trigger_block (
     output reg valid_o);
 
     parameter BASE_ADDR = 0;
-    localparam MAX_ADDR = 21;
+    localparam MAX_ADDR = 53;
 
     // trigger configuration registers
     // - each probe gets an operation and a compare register
     // - at the end we OR them all together. along with any custom probes the user specs
 
-    reg [3:0] valid_in_op = 0;
-    reg valid_in_arg = 0;
-    reg valid_in_trig;
+    reg [3:0] tg_state_op = 0;
+    reg [2:0] tg_state_arg = 0;
+    reg tg_state_trig;
     
-    trigger #(.INPUT_WIDTH(1)) valid_in_trigger (
+    trigger #(.INPUT_WIDTH(3)) tg_state_trigger (
         .clk(clk),
     
-        .probe(valid_in),
-        .op(valid_in_op),
-        .arg(valid_in_arg),
-        .trig(valid_in_trig));
-    reg [3:0] ready_in_op = 0;
-    reg ready_in_arg = 0;
-    reg ready_in_trig;
+        .probe(tg_state),
+        .op(tg_state_op),
+        .arg(tg_state_arg),
+        .trig(tg_state_trig));
+    reg [3:0] fstate_op = 0;
+    reg fstate_arg = 0;
+    reg fstate_trig;
     
-    trigger #(.INPUT_WIDTH(1)) ready_in_trigger (
+    trigger #(.INPUT_WIDTH(1)) fstate_trigger (
         .clk(clk),
     
-        .probe(ready_in),
-        .op(ready_in_op),
-        .arg(ready_in_arg),
-        .trig(ready_in_trig));
-    reg [3:0] newframe_in_op = 0;
-    reg newframe_in_arg = 0;
-    reg newframe_in_trig;
+        .probe(fstate),
+        .op(fstate_op),
+        .arg(fstate_arg),
+        .trig(fstate_trig));
+    reg [3:0] app_rdy_op = 0;
+    reg app_rdy_arg = 0;
+    reg app_rdy_trig;
     
-    trigger #(.INPUT_WIDTH(1)) newframe_in_trigger (
+    trigger #(.INPUT_WIDTH(1)) app_rdy_trigger (
         .clk(clk),
     
-        .probe(newframe_in),
-        .op(newframe_in_op),
-        .arg(newframe_in_arg),
-        .trig(newframe_in_trig));
-    reg [3:0] valid_out_op = 0;
-    reg valid_out_arg = 0;
-    reg valid_out_trig;
+        .probe(app_rdy),
+        .op(app_rdy_op),
+        .arg(app_rdy_arg),
+        .trig(app_rdy_trig));
+    reg [3:0] app_en_op = 0;
+    reg app_en_arg = 0;
+    reg app_en_trig;
     
-    trigger #(.INPUT_WIDTH(1)) valid_out_trigger (
+    trigger #(.INPUT_WIDTH(1)) app_en_trigger (
         .clk(clk),
     
-        .probe(valid_out),
-        .op(valid_out_op),
-        .arg(valid_out_arg),
-        .trig(valid_out_trig));
-    reg [3:0] ready_out_op = 0;
-    reg ready_out_arg = 0;
-    reg ready_out_trig;
+        .probe(app_en),
+        .op(app_en_op),
+        .arg(app_en_arg),
+        .trig(app_en_trig));
+    reg [3:0] app_cmd_op = 0;
+    reg [2:0] app_cmd_arg = 0;
+    reg app_cmd_trig;
     
-    trigger #(.INPUT_WIDTH(1)) ready_out_trigger (
+    trigger #(.INPUT_WIDTH(3)) app_cmd_trigger (
         .clk(clk),
     
-        .probe(ready_out),
-        .op(ready_out_op),
-        .arg(ready_out_arg),
-        .trig(ready_out_trig));
-    reg [3:0] tuser_out_op = 0;
-    reg tuser_out_arg = 0;
-    reg tuser_out_trig;
+        .probe(app_cmd),
+        .op(app_cmd_op),
+        .arg(app_cmd_arg),
+        .trig(app_cmd_trig));
+    reg [3:0] app_addr_op = 0;
+    reg [20:0] app_addr_arg = 0;
+    reg app_addr_trig;
     
-    trigger #(.INPUT_WIDTH(1)) tuser_out_trigger (
+    trigger #(.INPUT_WIDTH(21)) app_addr_trigger (
         .clk(clk),
     
-        .probe(tuser_out),
-        .op(tuser_out_op),
-        .arg(tuser_out_arg),
-        .trig(tuser_out_trig));
-    reg [3:0] pclk_cam_op = 0;
-    reg pclk_cam_arg = 0;
-    reg pclk_cam_trig;
+        .probe(app_addr),
+        .op(app_addr_op),
+        .arg(app_addr_arg),
+        .trig(app_addr_trig));
+    reg [3:0] app_wdf_rdy_op = 0;
+    reg app_wdf_rdy_arg = 0;
+    reg app_wdf_rdy_trig;
     
-    trigger #(.INPUT_WIDTH(1)) pclk_cam_trigger (
+    trigger #(.INPUT_WIDTH(1)) app_wdf_rdy_trigger (
         .clk(clk),
     
-        .probe(pclk_cam),
-        .op(pclk_cam_op),
-        .arg(pclk_cam_arg),
-        .trig(pclk_cam_trig));
+        .probe(app_wdf_rdy),
+        .op(app_wdf_rdy_op),
+        .arg(app_wdf_rdy_arg),
+        .trig(app_wdf_rdy_trig));
+    reg [3:0] app_wdf_wren_op = 0;
+    reg app_wdf_wren_arg = 0;
+    reg app_wdf_wren_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_wdf_wren_trigger (
+        .clk(clk),
+    
+        .probe(app_wdf_wren),
+        .op(app_wdf_wren_op),
+        .arg(app_wdf_wren_arg),
+        .trig(app_wdf_wren_trig));
+    reg [3:0] app_rd_data_valid_op = 0;
+    reg app_rd_data_valid_arg = 0;
+    reg app_rd_data_valid_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_rd_data_valid_trigger (
+        .clk(clk),
+    
+        .probe(app_rd_data_valid),
+        .op(app_rd_data_valid_op),
+        .arg(app_rd_data_valid_arg),
+        .trig(app_rd_data_valid_trig));
+    reg [3:0] app_rd_data_valid_hold_op = 0;
+    reg app_rd_data_valid_hold_arg = 0;
+    reg app_rd_data_valid_hold_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_rd_data_valid_hold_trigger (
+        .clk(clk),
+    
+        .probe(app_rd_data_valid_hold),
+        .op(app_rd_data_valid_hold_op),
+        .arg(app_rd_data_valid_hold_arg),
+        .trig(app_rd_data_valid_hold_trig));
+    reg [3:0] read_axis_af_op = 0;
+    reg read_axis_af_arg = 0;
+    reg read_axis_af_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) read_axis_af_trigger (
+        .clk(clk),
+    
+        .probe(read_axis_af),
+        .op(read_axis_af_op),
+        .arg(read_axis_af_arg),
+        .trig(read_axis_af_trig));
+    reg [3:0] iir_axis_af_op = 0;
+    reg iir_axis_af_arg = 0;
+    reg iir_axis_af_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) iir_axis_af_trigger (
+        .clk(clk),
+    
+        .probe(iir_axis_af),
+        .op(iir_axis_af_op),
+        .arg(iir_axis_af_arg),
+        .trig(iir_axis_af_trig));
+    reg [3:0] full_op = 0;
+    reg full_arg = 0;
+    reg full_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) full_trigger (
+        .clk(clk),
+    
+        .probe(full),
+        .op(full_op),
+        .arg(full_arg),
+        .trig(full_trig));
+    reg [3:0] empty_op = 0;
+    reg empty_arg = 0;
+    reg empty_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) empty_trigger (
+        .clk(clk),
+    
+        .probe(empty),
+        .op(empty_op),
+        .arg(empty_arg),
+        .trig(empty_trig));
+    reg [3:0] rdout_type_op = 0;
+    reg rdout_type_arg = 0;
+    reg rdout_type_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) rdout_type_trigger (
+        .clk(clk),
+    
+        .probe(rdout_type),
+        .op(rdout_type_op),
+        .arg(rdout_type_arg),
+        .trig(rdout_type_trig));
+    reg [3:0] rd_type_op = 0;
+    reg rd_type_arg = 0;
+    reg rd_type_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) rd_type_trigger (
+        .clk(clk),
+    
+        .probe(rd_type),
+        .op(rd_type_op),
+        .arg(rd_type_arg),
+        .trig(rd_type_trig));
+    reg [3:0] read_axis_tuser_op = 0;
+    reg read_axis_tuser_arg = 0;
+    reg read_axis_tuser_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) read_axis_tuser_trigger (
+        .clk(clk),
+    
+        .probe(read_axis_tuser),
+        .op(read_axis_tuser_op),
+        .arg(read_axis_tuser_arg),
+        .trig(read_axis_tuser_trig));
+    reg [3:0] iir_axis_tuser_op = 0;
+    reg iir_axis_tuser_arg = 0;
+    reg iir_axis_tuser_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) iir_axis_tuser_trigger (
+        .clk(clk),
+    
+        .probe(iir_axis_tuser),
+        .op(iir_axis_tuser_op),
+        .arg(iir_axis_tuser_arg),
+        .trig(iir_axis_tuser_trig));
+    reg [3:0] hdmi_addr_diff_op = 0;
+    reg [7:0] hdmi_addr_diff_arg = 0;
+    reg hdmi_addr_diff_trig;
+    
+    trigger #(.INPUT_WIDTH(8)) hdmi_addr_diff_trigger (
+        .clk(clk),
+    
+        .probe(hdmi_addr_diff),
+        .op(hdmi_addr_diff_op),
+        .arg(hdmi_addr_diff_arg),
+        .trig(hdmi_addr_diff_trig));
+    reg [3:0] iir_addr_diff_op = 0;
+    reg [7:0] iir_addr_diff_arg = 0;
+    reg iir_addr_diff_trig;
+    
+    trigger #(.INPUT_WIDTH(8)) iir_addr_diff_trigger (
+        .clk(clk),
+    
+        .probe(iir_addr_diff),
+        .op(iir_addr_diff_op),
+        .arg(iir_addr_diff_arg),
+        .trig(iir_addr_diff_trig));
+    reg [3:0] had_big_op = 0;
+    reg had_big_arg = 0;
+    reg had_big_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) had_big_trigger (
+        .clk(clk),
+    
+        .probe(had_big),
+        .op(had_big_op),
+        .arg(had_big_arg),
+        .trig(had_big_trig));
+    reg [3:0] iad_big_op = 0;
+    reg iad_big_arg = 0;
+    reg iad_big_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) iad_big_trigger (
+        .clk(clk),
+    
+        .probe(iad_big),
+        .op(iad_big_op),
+        .arg(iad_big_arg),
+        .trig(iad_big_trig));
+    reg [3:0] trigger_btn_op = 0;
+    reg trigger_btn_arg = 0;
+    reg trigger_btn_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) trigger_btn_trigger (
+        .clk(clk),
+    
+        .probe(trigger_btn),
+        .op(trigger_btn_op),
+        .arg(trigger_btn_arg),
+        .trig(trigger_btn_trig));
 
-   assign trig = valid_in_trig || ready_in_trig || newframe_in_trig || valid_out_trig || ready_out_trig || tuser_out_trig || pclk_cam_trig;
+   assign trig = tg_state_trig || fstate_trig || app_rdy_trig || app_en_trig || app_cmd_trig || app_addr_trig || app_wdf_rdy_trig || app_wdf_wren_trig || app_rd_data_valid_trig || app_rd_data_valid_hold_trig || read_axis_af_trig || iir_axis_af_trig || full_trig || empty_trig || rdout_type_trig || rd_type_trig || read_axis_tuser_trig || iir_axis_tuser_trig || hdmi_addr_diff_trig || iir_addr_diff_trig || had_big_trig || iad_big_trig || trigger_btn_trig;
 
     // perform register operations
     always @(posedge clk) begin
@@ -924,40 +1196,104 @@ module trigger_block (
             // reads
             if(valid_i && !rw_i) begin
                 case (addr_i)
-                    BASE_ADDR + 0: data_o <= valid_in_op;
-                    BASE_ADDR + 1: data_o <= valid_in_arg;
-                    BASE_ADDR + 2: data_o <= ready_in_op;
-                    BASE_ADDR + 3: data_o <= ready_in_arg;
-                    BASE_ADDR + 4: data_o <= newframe_in_op;
-                    BASE_ADDR + 5: data_o <= newframe_in_arg;
-                    BASE_ADDR + 6: data_o <= valid_out_op;
-                    BASE_ADDR + 7: data_o <= valid_out_arg;
-                    BASE_ADDR + 8: data_o <= ready_out_op;
-                    BASE_ADDR + 9: data_o <= ready_out_arg;
-                    BASE_ADDR + 10: data_o <= tuser_out_op;
-                    BASE_ADDR + 11: data_o <= tuser_out_arg;
-                    BASE_ADDR + 12: data_o <= pclk_cam_op;
-                    BASE_ADDR + 13: data_o <= pclk_cam_arg;
+                    BASE_ADDR + 0: data_o <= tg_state_op;
+                    BASE_ADDR + 1: data_o <= tg_state_arg;
+                    BASE_ADDR + 2: data_o <= fstate_op;
+                    BASE_ADDR + 3: data_o <= fstate_arg;
+                    BASE_ADDR + 4: data_o <= app_rdy_op;
+                    BASE_ADDR + 5: data_o <= app_rdy_arg;
+                    BASE_ADDR + 6: data_o <= app_en_op;
+                    BASE_ADDR + 7: data_o <= app_en_arg;
+                    BASE_ADDR + 8: data_o <= app_cmd_op;
+                    BASE_ADDR + 9: data_o <= app_cmd_arg;
+                    BASE_ADDR + 10: data_o <= app_addr_op;
+                    BASE_ADDR + 11: data_o <= app_addr_arg;
+                    BASE_ADDR + 12: data_o <= app_wdf_rdy_op;
+                    BASE_ADDR + 13: data_o <= app_wdf_rdy_arg;
+                    BASE_ADDR + 14: data_o <= app_wdf_wren_op;
+                    BASE_ADDR + 15: data_o <= app_wdf_wren_arg;
+                    BASE_ADDR + 16: data_o <= app_rd_data_valid_op;
+                    BASE_ADDR + 17: data_o <= app_rd_data_valid_arg;
+                    BASE_ADDR + 18: data_o <= app_rd_data_valid_hold_op;
+                    BASE_ADDR + 19: data_o <= app_rd_data_valid_hold_arg;
+                    BASE_ADDR + 20: data_o <= read_axis_af_op;
+                    BASE_ADDR + 21: data_o <= read_axis_af_arg;
+                    BASE_ADDR + 22: data_o <= iir_axis_af_op;
+                    BASE_ADDR + 23: data_o <= iir_axis_af_arg;
+                    BASE_ADDR + 24: data_o <= full_op;
+                    BASE_ADDR + 25: data_o <= full_arg;
+                    BASE_ADDR + 26: data_o <= empty_op;
+                    BASE_ADDR + 27: data_o <= empty_arg;
+                    BASE_ADDR + 28: data_o <= rdout_type_op;
+                    BASE_ADDR + 29: data_o <= rdout_type_arg;
+                    BASE_ADDR + 30: data_o <= rd_type_op;
+                    BASE_ADDR + 31: data_o <= rd_type_arg;
+                    BASE_ADDR + 32: data_o <= read_axis_tuser_op;
+                    BASE_ADDR + 33: data_o <= read_axis_tuser_arg;
+                    BASE_ADDR + 34: data_o <= iir_axis_tuser_op;
+                    BASE_ADDR + 35: data_o <= iir_axis_tuser_arg;
+                    BASE_ADDR + 36: data_o <= hdmi_addr_diff_op;
+                    BASE_ADDR + 37: data_o <= hdmi_addr_diff_arg;
+                    BASE_ADDR + 38: data_o <= iir_addr_diff_op;
+                    BASE_ADDR + 39: data_o <= iir_addr_diff_arg;
+                    BASE_ADDR + 40: data_o <= had_big_op;
+                    BASE_ADDR + 41: data_o <= had_big_arg;
+                    BASE_ADDR + 42: data_o <= iad_big_op;
+                    BASE_ADDR + 43: data_o <= iad_big_arg;
+                    BASE_ADDR + 44: data_o <= trigger_btn_op;
+                    BASE_ADDR + 45: data_o <= trigger_btn_arg;
                 endcase
             end
 
             // writes
             else if(valid_i && rw_i) begin
                 case (addr_i)
-                    BASE_ADDR + 0: valid_in_op <= data_i;
-                    BASE_ADDR + 1: valid_in_arg <= data_i;
-                    BASE_ADDR + 2: ready_in_op <= data_i;
-                    BASE_ADDR + 3: ready_in_arg <= data_i;
-                    BASE_ADDR + 4: newframe_in_op <= data_i;
-                    BASE_ADDR + 5: newframe_in_arg <= data_i;
-                    BASE_ADDR + 6: valid_out_op <= data_i;
-                    BASE_ADDR + 7: valid_out_arg <= data_i;
-                    BASE_ADDR + 8: ready_out_op <= data_i;
-                    BASE_ADDR + 9: ready_out_arg <= data_i;
-                    BASE_ADDR + 10: tuser_out_op <= data_i;
-                    BASE_ADDR + 11: tuser_out_arg <= data_i;
-                    BASE_ADDR + 12: pclk_cam_op <= data_i;
-                    BASE_ADDR + 13: pclk_cam_arg <= data_i;
+                    BASE_ADDR + 0: tg_state_op <= data_i;
+                    BASE_ADDR + 1: tg_state_arg <= data_i;
+                    BASE_ADDR + 2: fstate_op <= data_i;
+                    BASE_ADDR + 3: fstate_arg <= data_i;
+                    BASE_ADDR + 4: app_rdy_op <= data_i;
+                    BASE_ADDR + 5: app_rdy_arg <= data_i;
+                    BASE_ADDR + 6: app_en_op <= data_i;
+                    BASE_ADDR + 7: app_en_arg <= data_i;
+                    BASE_ADDR + 8: app_cmd_op <= data_i;
+                    BASE_ADDR + 9: app_cmd_arg <= data_i;
+                    BASE_ADDR + 10: app_addr_op <= data_i;
+                    BASE_ADDR + 11: app_addr_arg <= data_i;
+                    BASE_ADDR + 12: app_wdf_rdy_op <= data_i;
+                    BASE_ADDR + 13: app_wdf_rdy_arg <= data_i;
+                    BASE_ADDR + 14: app_wdf_wren_op <= data_i;
+                    BASE_ADDR + 15: app_wdf_wren_arg <= data_i;
+                    BASE_ADDR + 16: app_rd_data_valid_op <= data_i;
+                    BASE_ADDR + 17: app_rd_data_valid_arg <= data_i;
+                    BASE_ADDR + 18: app_rd_data_valid_hold_op <= data_i;
+                    BASE_ADDR + 19: app_rd_data_valid_hold_arg <= data_i;
+                    BASE_ADDR + 20: read_axis_af_op <= data_i;
+                    BASE_ADDR + 21: read_axis_af_arg <= data_i;
+                    BASE_ADDR + 22: iir_axis_af_op <= data_i;
+                    BASE_ADDR + 23: iir_axis_af_arg <= data_i;
+                    BASE_ADDR + 24: full_op <= data_i;
+                    BASE_ADDR + 25: full_arg <= data_i;
+                    BASE_ADDR + 26: empty_op <= data_i;
+                    BASE_ADDR + 27: empty_arg <= data_i;
+                    BASE_ADDR + 28: rdout_type_op <= data_i;
+                    BASE_ADDR + 29: rdout_type_arg <= data_i;
+                    BASE_ADDR + 30: rd_type_op <= data_i;
+                    BASE_ADDR + 31: rd_type_arg <= data_i;
+                    BASE_ADDR + 32: read_axis_tuser_op <= data_i;
+                    BASE_ADDR + 33: read_axis_tuser_arg <= data_i;
+                    BASE_ADDR + 34: iir_axis_tuser_op <= data_i;
+                    BASE_ADDR + 35: iir_axis_tuser_arg <= data_i;
+                    BASE_ADDR + 36: hdmi_addr_diff_op <= data_i;
+                    BASE_ADDR + 37: hdmi_addr_diff_arg <= data_i;
+                    BASE_ADDR + 38: iir_addr_diff_op <= data_i;
+                    BASE_ADDR + 39: iir_addr_diff_arg <= data_i;
+                    BASE_ADDR + 40: had_big_op <= data_i;
+                    BASE_ADDR + 41: had_big_arg <= data_i;
+                    BASE_ADDR + 42: iad_big_op <= data_i;
+                    BASE_ADDR + 43: iad_big_arg <= data_i;
+                    BASE_ADDR + 44: trigger_btn_op <= data_i;
+                    BASE_ADDR + 45: trigger_btn_arg <= data_i;
                 endcase
             end
         end

@@ -421,7 +421,13 @@ module top_level
    logic 	 read_axis_ready;
    logic 	 read_axis_tuser;
 
-   logic [2:0] 	 state;
+   logic [127:0] iir_axis_data;
+   logic 	 iir_axis_valid;
+   logic 	 iir_axis_af;
+   logic 	 iir_axis_ready;
+   logic 	 iir_axis_tuser;
+
+   logic [3:0] 	 state;
    
    traffic_generator tg
      (.clk_in(ui_clk),
@@ -454,8 +460,15 @@ module top_level
       .read_axis_af(read_axis_af),
       .read_axis_ready(read_axis_ready),
       .read_axis_tuser(read_axis_tuser),
+      .iir_axis_data(iir_axis_data),
+      .iir_axis_valid(iir_axis_valid),
+      .iir_axis_af(iir_axis_af),
+      .iir_axis_ready(iir_axis_ready),
+      .iir_axis_tuser(iir_axis_tuser),
       .state_out(state),
-      .trigger_btn_sync(trigger_btn_ui)
+      .trigger_btn_sync(trigger_btn_ui),
+      .rx(uart_rxd), // for manta
+      .tx(uart_txd) // for manta
       );
 
 
@@ -483,7 +496,7 @@ module top_level
    logic 	 hdmi_pixel_valid;
    logic 	 hdmi_pixel_nf;
 
-   digest_phrase
+   digest_phrase digest_hdmi
      (.clk_in(clk_pixel),
       .rst_in(sys_rst_pixel),
       .valid_phrase(hdmi_axis_valid),
@@ -494,6 +507,45 @@ module top_level
       .ready_word(hdmi_pixel_ready),
       .newframe_out(hdmi_pixel_nf),
       .word(hdmi_pixel));
+
+   logic 	 iirp_axis_valid;
+   logic 	 iirp_axis_ready;
+   logic [127:0] iirp_axis_data;
+   logic 	 iirp_axis_tuser;
+   ddr_fifo iir_read
+     (.s_axis_aresetn(~sys_rst_ui), // active low
+      .s_axis_aclk(ui_clk),
+      .s_axis_tvalid(iir_axis_valid),
+      .s_axis_tready(iir_axis_ready),
+      .s_axis_tdata(iir_axis_data),
+      .s_axis_tuser(iir_axis_tuser),
+      .prog_full(iir_axis_af),
+      .m_axis_aclk(clk_camera),
+      .m_axis_tvalid(iirp_axis_valid),
+      .m_axis_tready(iirp_axis_ready), // ready will spit you data! use in proper state
+      .m_axis_tdata(iirp_axis_data),
+      .m_axis_tuser(iirp_axis_tuser));
+
+   logic [15:0]  history_pixel;
+   logic 	 history_pixel_ready;
+   logic 	 history_pixel_valid;
+   logic 	 history_pixel_nf;
+   digest_phrase digest_history
+     (.clk_in(clk_camera),
+      .rst_in(sys_rst_camera),
+      .valid_phrase(iirp_axis_valid),
+      .ready_phrase(iirp_axis_ready),
+      .phrase_data(iirp_axis_data),
+      .phrase_tuser(iirp_axis_tuser),
+      .valid_word(history_pixel_valid),
+      .ready_word(history_pixel_ready),
+      .newframe_out(history_pixel_nf),
+      .word(history_pixel));
+
+   assign history_pixel_ready = valid_cc;
+
+   
+   
    
    // assign led[5:4] = hdmi_pixel[8:7];
    // assign led[7] = hdmi_axis_ready;
@@ -503,11 +555,9 @@ module top_level
    // assign led[15] = hdmi_pixel_valid;
    // assign led[6] = hdmi_pixel_ready;
 
-   assign led[15:3] = {state[1:0], // 15:14
-		       sys_rst_camera, sys_rst_ui, sys_rst_pixel, // 13:11
-		       trigger_btn_camera, trigger_btn_ui, trigger_btn_pixel, // 10:8
-		       valid_cc, newframe_cc, phrase_axis_tuser, // 7:5
-		       2'b0 // 4:3
+   assign led[15:3] = {state[3:0], // 15:12
+		       history_pixel_valid, hdmi_pixel_valid,// 11:10
+		       7'b0 // 9:3
 		       };
     
    ddr3_mig ddr3_mig_inst 

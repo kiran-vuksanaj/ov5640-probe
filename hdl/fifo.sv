@@ -169,4 +169,43 @@ module addr_increment
    end
 endmodule // addr_increment
 
+module sync_fifo
+  #(parameter DEPTH = 16,
+    parameter WIDTH = 1)
+   (
+    input wire 		     clk_in,
+    input wire 		     rst_in,
+    input wire 		     wr_en,
+    input wire 		     rd_en,
+    input wire [WIDTH-1:0]   data_in,
+    output logic [WIDTH-1:0] data_out,
+    output logic 	     full,
+    output logic 	     empty);
+
+
+   logic [$clog2(DEPTH)-1:0] wr_ptr, rd_ptr;
+   logic [WIDTH-1:0] 	     fifo[DEPTH-1:0];
+
+   always_ff @(posedge clk_in) begin
+      if (rst_in) begin
+	 wr_ptr <= 0;
+	 rd_ptr <= 0;
+	 data_out <= 0;
+      end
+      if (wr_en && ~full) begin
+	 fifo[wr_ptr] <= data_in;
+	 wr_ptr <= wr_ptr + 1;
+      end
+      if (rd_en && ~empty) begin
+	 data_out <= fifo[rd_ptr];
+	 rd_ptr <= rd_ptr + 1;
+      end
+   end // always_ff @ (posedge clk_in)
+
+   assign full = ((wr_ptr+1'b1) == rd_ptr);
+   assign empty = (wr_ptr == rd_ptr);
+    
+endmodule // sync_fifo
+
+
 `default_nettype wire

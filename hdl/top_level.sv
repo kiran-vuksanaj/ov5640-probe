@@ -252,21 +252,6 @@ module top_level
    
    assign newframe_cc = (hcount_cc <= 1 && vcount_cc == 0);
    
-   build_wr_data
-     (.clk_in(clk_camera),
-      .rst_in(sys_rst_camera),
-      .valid_in(valid_cc),
-      .ready_in(ready_builder), // discarded currently
-      // .data_in(pixel_cc_filter),// temporary test value
-      .data_in(pixel_cc),
-      .newframe_in(newframe_cc),
-      .valid_out(phrase_axis_valid),
-      .ready_out(phrase_axis_ready),
-      .data_out(phrase_axis_data),
-      .tuser_out(phrase_axis_tuser)
-      );
-
-
    // ======================= CHAPTER : SEVEN SEGMENT PROBE ======================
    
    // for the sake of syncing all potentially-used signals:
@@ -541,10 +526,6 @@ module top_level
       .ready_word(history_pixel_ready),
       .newframe_out(history_pixel_nf),
       .word(history_pixel));
-
-   assign history_pixel_ready = valid_cc;
-
-   
    
    
    // assign led[5:4] = hdmi_pixel[8:7];
@@ -603,6 +584,85 @@ module top_level
       );
 
 
+   // =============== CHAPTER: GLOW TRAILS =========================
+
+
+   // camera pixel: pixel_cc, valid_cc, newframe_cc
+   // history pixel: history_pixel_valid, history_pixel_ready, history_pixel, history_pixel_nf
+
+   logic [23:0]  history_pixel_full;
+   assign history_pixel_full = {
+				history_pixel[15:11],3'b0,
+				history_pixel[10:5],2'b0,
+				history_pixel[4:0],3'b0
+				};
+   // hold the history fifo to sync when newframe signal comes, until newframe_cc is also high
+   assign history_pixel_ready = history_pixel_nf ? (valid_cc && newframe_cc) : valid_cc;
+
+   logic [23:0]  camera_pixel_full;
+   assign camera_pixel_full = {
+			       pixel_cc[15:11], 3'b0,
+			       pixel_cc[10:5], 2'b0,
+			       pixel_cc[4:0], 3'b0
+			       };
+
+   logic [23:0]  update_pixel_full;
+   logic [15:0] update_pixel;
+   assign update_pixel = {
+			  update_pixel_full[23:19],
+			  update_pixel_full[15:11],1'b0,
+			  update_pixel_full[7:3]
+			  };
+
+
+   logic [7:0] 		   threshold;
+   assign threshold = sw[15:8];
+
+   logic 		   data_valid_iir;
+   
+   trail_iir trail_generator
+     (.clk_in(clk_camera),
+      .rst_in(sys_rst_camera),
+      .threshold_in(threshold),
+      .mask_in(0),
+      .valid_in(valid_cc),
+      .history_in(history_pixel_full),
+      .camera_in(camera_pixel_full),
+      .update_out(update_pixel_full),
+      .valid_out(data_valid_iir));
+   
+
+   // pipeline the newframe signal, 2 cycles
+   logic 		   newframe_pipe1, newframe_pipe2;
+   always_ff @(posedge clk_camera) begin
+      if (sys_rst_camera) begin
+	 newframe_pipe1 <= 0;
+	 newframe_pipe2 <= 0;
+      end else begin
+	 newframe_pipe1 <= newframe_cc;
+	 newframe_pipe2 <= newframe_pipe1;
+      end
+   end
+   
+   // update pixel!
+   
+   build_wr_data
+     (.clk_in(clk_camera),
+      .rst_in(sys_rst_camera),
+      .valid_in(data_valid_iir),
+      .ready_in(ready_builder), // discarded currently
+      // .data_in(pixel_cc_filter),// temporary test value
+      .data_in(update_pixel),
+      .newframe_in(newframe_pipe2),
+      .valid_out(phrase_axis_valid),
+      .ready_out(phrase_axis_ready),
+      .data_out(phrase_axis_data),
+      .tuser_out(phrase_axis_tuser)
+      );
+
+
+
+   
    // =============== CHAPTER: HDMI OUTPUT =========================
    
    logic [9:0] tmds_10b [0:2]; //output of each TMDS encoder!

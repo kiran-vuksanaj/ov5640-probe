@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 11 Jan 2024 at 14:44:12 by kiranv
+This module was generated with Manta v0.0.5 on 20 Jan 2024 at 17:54:26 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -16,13 +16,20 @@ manta manta_inst (
     .rx(rx),
     .tx(tx),
     
-    .valid_in(valid_in), 
-    .ready_in(ready_in), 
-    .newframe_in(newframe_in), 
-    .valid_out(valid_out), 
-    .ready_out(ready_out), 
-    .tuser_out(tuser_out), 
-    .pclk_cam(pclk_cam));
+    .ii_state(ii_state), 
+    .cr_init_valid(cr_init_valid), 
+    .cr_init_ready(cr_init_ready), 
+    .register_sequence_addr_p(register_sequence_addr_p), 
+    .register_sequence_dout_p(register_sequence_dout_p), 
+    .busy(busy), 
+    .bus_active(bus_active), 
+    
+    
+    .register_sequence_clk(register_sequence_clk), 
+    .register_sequence_addr(register_sequence_addr), 
+    .register_sequence_din(register_sequence_din), 
+    .register_sequence_dout(register_sequence_dout), 
+    .register_sequence_we(register_sequence_we));
 
 */
 
@@ -32,16 +39,22 @@ module manta (
     input wire rx,
     output reg tx,
     
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam);
+    input wire [3:0] ii_state,
+    input wire cr_init_valid,
+    input wire cr_init_ready,
+    input wire [8:0] register_sequence_addr_p,
+    input wire [23:0] register_sequence_dout_p,
+    input wire busy,
+    input wire bus_active,
+    
+    input wire register_sequence_clk,
+    input wire [7:0] register_sequence_addr,
+    input wire [23:0] register_sequence_din,
+    output reg [23:0] register_sequence_dout,
+    input wire register_sequence_we);
 
 
-    uart_rx #(.CLOCKS_PER_BAUD(133)) urx (
+    uart_rx #(.CLOCKS_PER_BAUD(66)) urx (
         .clk(clk),
         .rx(rx),
     
@@ -57,47 +70,73 @@ module manta (
         .data_i(urx_brx_data),
         .valid_i(urx_brx_valid),
     
-        .addr_o(brx_cam_logic_analyzer_addr),
-        .data_o(brx_cam_logic_analyzer_data),
-        .rw_o(brx_cam_logic_analyzer_rw),
-        .valid_o(brx_cam_logic_analyzer_valid));
-    reg [15:0] brx_cam_logic_analyzer_addr;
-    reg [15:0] brx_cam_logic_analyzer_data;
-    reg brx_cam_logic_analyzer_rw;
-    reg brx_cam_logic_analyzer_valid;
+        .addr_o(brx_iic_la_addr),
+        .data_o(brx_iic_la_data),
+        .rw_o(brx_iic_la_rw),
+        .valid_o(brx_iic_la_valid));
+    reg [15:0] brx_iic_la_addr;
+    reg [15:0] brx_iic_la_data;
+    reg brx_iic_la_rw;
+    reg brx_iic_la_valid;
     
 
-    logic_analyzer cam_logic_analyzer (
+    logic_analyzer iic_la (
         .clk(clk),
     
-        .addr_i(brx_cam_logic_analyzer_addr),
-        .data_i(brx_cam_logic_analyzer_data),
-        .rw_i(brx_cam_logic_analyzer_rw),
-        .valid_i(brx_cam_logic_analyzer_valid),
+        .addr_i(brx_iic_la_addr),
+        .data_i(brx_iic_la_data),
+        .rw_i(brx_iic_la_rw),
+        .valid_i(brx_iic_la_valid),
     
-        .valid_in(valid_in),
-        .ready_in(ready_in),
-        .newframe_in(newframe_in),
-        .valid_out(valid_out),
-        .ready_out(ready_out),
-        .tuser_out(tuser_out),
-        .pclk_cam(pclk_cam),
+        .ii_state(ii_state),
+        .cr_init_valid(cr_init_valid),
+        .cr_init_ready(cr_init_ready),
+        .register_sequence_addr_p(register_sequence_addr_p),
+        .register_sequence_dout_p(register_sequence_dout_p),
+        .busy(busy),
+        .bus_active(bus_active),
+    
+        .addr_o(iic_la_register_sequence_addr),
+        .data_o(iic_la_register_sequence_data),
+        .rw_o(iic_la_register_sequence_rw),
+        .valid_o(iic_la_register_sequence_valid));
+    reg [15:0] iic_la_register_sequence_addr;
+    reg [15:0] iic_la_register_sequence_data;
+    reg iic_la_register_sequence_rw;
+    reg iic_la_register_sequence_valid;
+    
+    block_memory #(
+        .WIDTH(24),
+        .DEPTH(256)
+    ) register_sequence (
+        .clk(clk),
+    
+        .addr_i(iic_la_register_sequence_addr),
+        .data_i(iic_la_register_sequence_data),
+        .rw_i(iic_la_register_sequence_rw),
+        .valid_i(iic_la_register_sequence_valid),
+    
+        .user_clk(register_sequence_clk),
+        .user_addr(register_sequence_addr),
+        .user_din(register_sequence_din),
+        .user_dout(register_sequence_dout),
+        .user_we(register_sequence_we),
     
         .addr_o(),
-        .data_o(cam_logic_analyzer_btx_data),
-        .rw_o(cam_logic_analyzer_btx_rw),
-        .valid_o(cam_logic_analyzer_btx_valid));
+        .data_o(register_sequence_btx_data),
+        .rw_o(register_sequence_btx_rw),
+        .valid_o(register_sequence_btx_valid));
 
     
-    reg [15:0] cam_logic_analyzer_btx_data;
-    reg cam_logic_analyzer_btx_rw;
-    reg cam_logic_analyzer_btx_valid;
+    reg [15:0] register_sequence_btx_data;
+    reg register_sequence_btx_rw;
+    reg register_sequence_btx_valid;
     bridge_tx btx (
         .clk(clk),
     
-        .data_i(cam_logic_analyzer_btx_data),
-        .rw_i(cam_logic_analyzer_btx_rw),
-        .valid_i(cam_logic_analyzer_btx_valid),
+        .data_i(register_sequence_btx_data),
+        .rw_i(register_sequence_btx_rw),
+        .valid_i(register_sequence_btx_valid),
     
         .data_o(btx_utx_data),
         .start_o(btx_utx_start),
@@ -107,7 +146,7 @@ module manta (
     reg btx_utx_start;
     reg utx_btx_done;
     
-    uart_tx #(.CLOCKS_PER_BAUD(133)) utx (
+    uart_tx #(.CLOCKS_PER_BAUD(66)) utx (
         .clk(clk),
     
         .data_i(btx_utx_data),
@@ -326,13 +365,13 @@ module logic_analyzer (
     input wire clk,
 
     // probes
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam,
+    input wire [3:0] ii_state,
+    input wire cr_init_valid,
+    input wire cr_init_ready,
+    input wire [8:0] register_sequence_addr_p,
+    input wire [23:0] register_sequence_dout_p,
+    input wire busy,
+    input wire bus_active,
 
     // input port
     input wire [15:0] addr_i,
@@ -362,9 +401,9 @@ module logic_analyzer (
     reg [ADDR_WIDTH-1:0] bram_addr;
     reg bram_we;
 
-    localparam TOTAL_PROBE_WIDTH = 7;
+    localparam TOTAL_PROBE_WIDTH = 41;
     reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {pclk_cam, tuser_out, ready_out, valid_out, newframe_in, ready_in, valid_in};
+    assign probes_concat = {bus_active, busy, register_sequence_dout_p, register_sequence_addr_p, cr_init_ready, cr_init_valid, ii_state};
 
     logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
         .clk(clk),
@@ -419,13 +458,13 @@ module logic_analyzer (
     trigger_block #(.BASE_ADDR(7)) trig_blk (
         .clk(clk),
 
-        .valid_in(valid_in),
-        .ready_in(ready_in),
-        .newframe_in(newframe_in),
-        .valid_out(valid_out),
-        .ready_out(ready_out),
-        .tuser_out(tuser_out),
-        .pclk_cam(pclk_cam),
+        .ii_state(ii_state),
+        .cr_init_valid(cr_init_valid),
+        .cr_init_ready(cr_init_ready),
+        .register_sequence_addr_p(register_sequence_addr_p),
+        .register_sequence_dout_p(register_sequence_dout_p),
+        .busy(busy),
+        .bus_active(bus_active),
 
         .trig(trig),
 
@@ -802,13 +841,13 @@ module trigger_block (
     input wire clk,
 
     // probes
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam,
+    input wire [3:0] ii_state,
+    input wire cr_init_valid,
+    input wire cr_init_ready,
+    input wire [8:0] register_sequence_addr_p,
+    input wire [23:0] register_sequence_dout_p,
+    input wire busy,
+    input wire bus_active,
 
     // trigger
     output reg trig,
@@ -832,85 +871,85 @@ module trigger_block (
     // - each probe gets an operation and a compare register
     // - at the end we OR them all together. along with any custom probes the user specs
 
-    reg [3:0] valid_in_op = 0;
-    reg valid_in_arg = 0;
-    reg valid_in_trig;
+    reg [3:0] ii_state_op = 0;
+    reg [3:0] ii_state_arg = 0;
+    reg ii_state_trig;
     
-    trigger #(.INPUT_WIDTH(1)) valid_in_trigger (
+    trigger #(.INPUT_WIDTH(4)) ii_state_trigger (
         .clk(clk),
     
-        .probe(valid_in),
-        .op(valid_in_op),
-        .arg(valid_in_arg),
-        .trig(valid_in_trig));
-    reg [3:0] ready_in_op = 0;
-    reg ready_in_arg = 0;
-    reg ready_in_trig;
+        .probe(ii_state),
+        .op(ii_state_op),
+        .arg(ii_state_arg),
+        .trig(ii_state_trig));
+    reg [3:0] cr_init_valid_op = 0;
+    reg cr_init_valid_arg = 0;
+    reg cr_init_valid_trig;
     
-    trigger #(.INPUT_WIDTH(1)) ready_in_trigger (
+    trigger #(.INPUT_WIDTH(1)) cr_init_valid_trigger (
         .clk(clk),
     
-        .probe(ready_in),
-        .op(ready_in_op),
-        .arg(ready_in_arg),
-        .trig(ready_in_trig));
-    reg [3:0] newframe_in_op = 0;
-    reg newframe_in_arg = 0;
-    reg newframe_in_trig;
+        .probe(cr_init_valid),
+        .op(cr_init_valid_op),
+        .arg(cr_init_valid_arg),
+        .trig(cr_init_valid_trig));
+    reg [3:0] cr_init_ready_op = 0;
+    reg cr_init_ready_arg = 0;
+    reg cr_init_ready_trig;
     
-    trigger #(.INPUT_WIDTH(1)) newframe_in_trigger (
+    trigger #(.INPUT_WIDTH(1)) cr_init_ready_trigger (
         .clk(clk),
     
-        .probe(newframe_in),
-        .op(newframe_in_op),
-        .arg(newframe_in_arg),
-        .trig(newframe_in_trig));
-    reg [3:0] valid_out_op = 0;
-    reg valid_out_arg = 0;
-    reg valid_out_trig;
+        .probe(cr_init_ready),
+        .op(cr_init_ready_op),
+        .arg(cr_init_ready_arg),
+        .trig(cr_init_ready_trig));
+    reg [3:0] register_sequence_addr_p_op = 0;
+    reg [8:0] register_sequence_addr_p_arg = 0;
+    reg register_sequence_addr_p_trig;
     
-    trigger #(.INPUT_WIDTH(1)) valid_out_trigger (
+    trigger #(.INPUT_WIDTH(9)) register_sequence_addr_p_trigger (
         .clk(clk),
     
-        .probe(valid_out),
-        .op(valid_out_op),
-        .arg(valid_out_arg),
-        .trig(valid_out_trig));
-    reg [3:0] ready_out_op = 0;
-    reg ready_out_arg = 0;
-    reg ready_out_trig;
+        .probe(register_sequence_addr_p),
+        .op(register_sequence_addr_p_op),
+        .arg(register_sequence_addr_p_arg),
+        .trig(register_sequence_addr_p_trig));
+    reg [3:0] register_sequence_dout_p_op = 0;
+    reg [23:0] register_sequence_dout_p_arg = 0;
+    reg register_sequence_dout_p_trig;
     
-    trigger #(.INPUT_WIDTH(1)) ready_out_trigger (
+    trigger #(.INPUT_WIDTH(24)) register_sequence_dout_p_trigger (
         .clk(clk),
     
-        .probe(ready_out),
-        .op(ready_out_op),
-        .arg(ready_out_arg),
-        .trig(ready_out_trig));
-    reg [3:0] tuser_out_op = 0;
-    reg tuser_out_arg = 0;
-    reg tuser_out_trig;
+        .probe(register_sequence_dout_p),
+        .op(register_sequence_dout_p_op),
+        .arg(register_sequence_dout_p_arg),
+        .trig(register_sequence_dout_p_trig));
+    reg [3:0] busy_op = 0;
+    reg busy_arg = 0;
+    reg busy_trig;
     
-    trigger #(.INPUT_WIDTH(1)) tuser_out_trigger (
+    trigger #(.INPUT_WIDTH(1)) busy_trigger (
         .clk(clk),
     
-        .probe(tuser_out),
-        .op(tuser_out_op),
-        .arg(tuser_out_arg),
-        .trig(tuser_out_trig));
-    reg [3:0] pclk_cam_op = 0;
-    reg pclk_cam_arg = 0;
-    reg pclk_cam_trig;
+        .probe(busy),
+        .op(busy_op),
+        .arg(busy_arg),
+        .trig(busy_trig));
+    reg [3:0] bus_active_op = 0;
+    reg bus_active_arg = 0;
+    reg bus_active_trig;
     
-    trigger #(.INPUT_WIDTH(1)) pclk_cam_trigger (
+    trigger #(.INPUT_WIDTH(1)) bus_active_trigger (
         .clk(clk),
     
-        .probe(pclk_cam),
-        .op(pclk_cam_op),
-        .arg(pclk_cam_arg),
-        .trig(pclk_cam_trig));
+        .probe(bus_active),
+        .op(bus_active_op),
+        .arg(bus_active_arg),
+        .trig(bus_active_trig));
 
-   assign trig = valid_in_trig || ready_in_trig || newframe_in_trig || valid_out_trig || ready_out_trig || tuser_out_trig || pclk_cam_trig;
+   assign trig = ii_state_trig || cr_init_valid_trig || cr_init_ready_trig || register_sequence_addr_p_trig || register_sequence_dout_p_trig || busy_trig || bus_active_trig;
 
     // perform register operations
     always @(posedge clk) begin
@@ -924,40 +963,40 @@ module trigger_block (
             // reads
             if(valid_i && !rw_i) begin
                 case (addr_i)
-                    BASE_ADDR + 0: data_o <= valid_in_op;
-                    BASE_ADDR + 1: data_o <= valid_in_arg;
-                    BASE_ADDR + 2: data_o <= ready_in_op;
-                    BASE_ADDR + 3: data_o <= ready_in_arg;
-                    BASE_ADDR + 4: data_o <= newframe_in_op;
-                    BASE_ADDR + 5: data_o <= newframe_in_arg;
-                    BASE_ADDR + 6: data_o <= valid_out_op;
-                    BASE_ADDR + 7: data_o <= valid_out_arg;
-                    BASE_ADDR + 8: data_o <= ready_out_op;
-                    BASE_ADDR + 9: data_o <= ready_out_arg;
-                    BASE_ADDR + 10: data_o <= tuser_out_op;
-                    BASE_ADDR + 11: data_o <= tuser_out_arg;
-                    BASE_ADDR + 12: data_o <= pclk_cam_op;
-                    BASE_ADDR + 13: data_o <= pclk_cam_arg;
+                    BASE_ADDR + 0: data_o <= ii_state_op;
+                    BASE_ADDR + 1: data_o <= ii_state_arg;
+                    BASE_ADDR + 2: data_o <= cr_init_valid_op;
+                    BASE_ADDR + 3: data_o <= cr_init_valid_arg;
+                    BASE_ADDR + 4: data_o <= cr_init_ready_op;
+                    BASE_ADDR + 5: data_o <= cr_init_ready_arg;
+                    BASE_ADDR + 6: data_o <= register_sequence_addr_p_op;
+                    BASE_ADDR + 7: data_o <= register_sequence_addr_p_arg;
+                    BASE_ADDR + 8: data_o <= register_sequence_dout_p_op;
+                    BASE_ADDR + 9: data_o <= register_sequence_dout_p_arg;
+                    BASE_ADDR + 10: data_o <= busy_op;
+                    BASE_ADDR + 11: data_o <= busy_arg;
+                    BASE_ADDR + 12: data_o <= bus_active_op;
+                    BASE_ADDR + 13: data_o <= bus_active_arg;
                 endcase
             end
 
             // writes
             else if(valid_i && rw_i) begin
                 case (addr_i)
-                    BASE_ADDR + 0: valid_in_op <= data_i;
-                    BASE_ADDR + 1: valid_in_arg <= data_i;
-                    BASE_ADDR + 2: ready_in_op <= data_i;
-                    BASE_ADDR + 3: ready_in_arg <= data_i;
-                    BASE_ADDR + 4: newframe_in_op <= data_i;
-                    BASE_ADDR + 5: newframe_in_arg <= data_i;
-                    BASE_ADDR + 6: valid_out_op <= data_i;
-                    BASE_ADDR + 7: valid_out_arg <= data_i;
-                    BASE_ADDR + 8: ready_out_op <= data_i;
-                    BASE_ADDR + 9: ready_out_arg <= data_i;
-                    BASE_ADDR + 10: tuser_out_op <= data_i;
-                    BASE_ADDR + 11: tuser_out_arg <= data_i;
-                    BASE_ADDR + 12: pclk_cam_op <= data_i;
-                    BASE_ADDR + 13: pclk_cam_arg <= data_i;
+                    BASE_ADDR + 0: ii_state_op <= data_i;
+                    BASE_ADDR + 1: ii_state_arg <= data_i;
+                    BASE_ADDR + 2: cr_init_valid_op <= data_i;
+                    BASE_ADDR + 3: cr_init_valid_arg <= data_i;
+                    BASE_ADDR + 4: cr_init_ready_op <= data_i;
+                    BASE_ADDR + 5: cr_init_ready_arg <= data_i;
+                    BASE_ADDR + 6: register_sequence_addr_p_op <= data_i;
+                    BASE_ADDR + 7: register_sequence_addr_p_arg <= data_i;
+                    BASE_ADDR + 8: register_sequence_dout_p_op <= data_i;
+                    BASE_ADDR + 9: register_sequence_dout_p_arg <= data_i;
+                    BASE_ADDR + 10: busy_op <= data_i;
+                    BASE_ADDR + 11: busy_arg <= data_i;
+                    BASE_ADDR + 12: bus_active_op <= data_i;
+                    BASE_ADDR + 13: bus_active_arg <= data_i;
                 endcase
             end
         end
@@ -1002,6 +1041,176 @@ module trigger (
             default:    trig = 0;
         endcase
     end
+endmodule
+
+module block_memory (
+    input wire clk,
+
+    // input port
+    input wire [15:0] addr_i,
+    input wire [15:0] data_i,
+    input wire rw_i,
+    input wire valid_i,
+
+    // output port
+    output reg [15:0] addr_o,
+    output reg [15:0] data_o,
+    output reg rw_o,
+    output reg valid_o,
+
+    // BRAM itself
+    input wire user_clk,
+    input wire [ADDR_WIDTH-1:0] user_addr,
+    input wire [WIDTH-1:0] user_din,
+    output reg [WIDTH-1:0] user_dout,
+    input wire user_we);
+
+    parameter BASE_ADDR = 0;
+    parameter WIDTH = 0;
+    parameter DEPTH = 0;
+    localparam ADDR_WIDTH = $clog2(DEPTH);
+
+    // ugly typecasting, but just computes ceil(WIDTH / 16)
+    localparam N_BRAMS = int'($ceil(real'(WIDTH) / 16.0));
+    localparam MAX_ADDR = BASE_ADDR + (DEPTH * N_BRAMS);
+
+    // Port A of BRAMs
+    reg [N_BRAMS-1:0][ADDR_WIDTH-1:0] addra = 0;
+    reg [N_BRAMS-1:0][15:0] dina = 0;
+    reg [N_BRAMS-1:0][15:0] douta;
+    reg [N_BRAMS-1:0] wea = 0;
+
+    // Port B of BRAMs
+    reg [N_BRAMS-1:0][15:0] dinb;
+    reg [N_BRAMS-1:0][15:0] doutb;
+    assign dinb = user_din;
+
+    // kind of a hack to part select from a 2d array that's been flattened to 1d
+    reg [(N_BRAMS*16)-1:0] doutb_flattened;
+    assign doutb_flattened = doutb;
+    assign user_dout = doutb_flattened[WIDTH-1:0];
+
+    // Pipelining
+    reg [2:0][15:0] addr_pipe = 0;
+    reg [2:0][15:0] data_pipe = 0;
+    reg [2:0] valid_pipe = 0;
+    reg [2:0] rw_pipe = 0;
+
+    always @(posedge clk) begin
+        addr_pipe[0] <= addr_i;
+        data_pipe[0] <= data_i;
+        valid_pipe[0] <= valid_i;
+        rw_pipe[0] <= rw_i;
+
+        addr_o <= addr_pipe[2];
+        data_o <= data_pipe[2];
+        valid_o <= valid_pipe[2];
+        rw_o <= rw_pipe[2];
+
+        for(int i=1; i<3; i=i+1) begin
+            addr_pipe[i] <= addr_pipe[i-1];
+            data_pipe[i] <= data_pipe[i-1];
+            valid_pipe[i] <= valid_pipe[i-1];
+            rw_pipe[i] <= rw_pipe[i-1];
+        end
+
+        // throw BRAM operations into the front of the pipeline
+        wea <= 0;
+        if( (valid_i) && (addr_i >= BASE_ADDR) && (addr_i <= MAX_ADDR)) begin
+            wea[(addr_i - BASE_ADDR) % N_BRAMS]   <= rw_i;
+            addra[(addr_i - BASE_ADDR) % N_BRAMS] <= (addr_i - BASE_ADDR) / N_BRAMS;
+            dina[(addr_i - BASE_ADDR) % N_BRAMS]  <= data_i;
+        end
+
+        // pull BRAM reads from the back of the pipeline
+        if( (valid_pipe[2]) && (addr_pipe[2] >= BASE_ADDR) && (addr_pipe[2] <= MAX_ADDR)) begin
+            data_o <= douta[(addr_pipe[2] - BASE_ADDR) % N_BRAMS];
+        end
+    end
+
+    // generate the BRAMs
+    genvar i;
+    generate
+        for(i=0; i<N_BRAMS; i=i+1) begin
+            dual_port_bram #(
+                .RAM_WIDTH(16),
+                .RAM_DEPTH(DEPTH)
+                ) bram_full_width_i (
+
+                // port A is controlled by the bus
+                .clka(clk),
+                .addra(addra[i]),
+                .dina(dina[i]),
+                .douta(douta[i]),
+                .wea(wea[i]),
+
+                // port B is exposed to the user
+                .clkb(user_clk),
+                .addrb(user_addr),
+                .dinb(dinb[i]),
+                .doutb(doutb[i]),
+                .web(user_we));
+        end
+    endgenerate
+endmodule
+//  Xilinx True Dual Port RAM, Read First, Dual Clock
+//  This code implements a parameterizable true dual port memory (both ports can read and write).
+//  The behavior of this RAM is when data is written, the prior memory contents at the write
+//  address are presented on the output port.  If the output data is
+//  not needed during writes or the last read value is desired to be retained,
+//  it is suggested to use a no change RAM as it is more power efficient.
+//  If a reset or enable is not necessary, it may be tied off or removed from the code.
+
+//  Modified from the xilinx_true_dual_port_read_first_2_clock_ram verilog language template.
+
+module dual_port_bram #(
+    parameter RAM_WIDTH = 0,
+    parameter RAM_DEPTH = 0
+    ) (
+    input wire [$clog2(RAM_DEPTH-1)-1:0] addra,
+    input wire [$clog2(RAM_DEPTH-1)-1:0] addrb,
+    input wire [RAM_WIDTH-1:0] dina,
+    input wire [RAM_WIDTH-1:0] dinb,
+    input wire clka,
+    input wire clkb,
+    input wire wea,
+    input wire web,
+    output wire [RAM_WIDTH-1:0] douta,
+    output wire [RAM_WIDTH-1:0] doutb
+    );
+
+    // The following code either initializes the memory values to a specified file or to all zeros to match hardware
+    generate
+        integer i;
+        initial begin
+            for (i = 0; i < RAM_DEPTH; i = i + 1)
+                BRAM[i] = {RAM_WIDTH{1'b0}};
+        end
+    endgenerate
+
+    reg [RAM_WIDTH-1:0] BRAM [RAM_DEPTH-1:0];
+    reg [RAM_WIDTH-1:0] ram_data_a = {RAM_WIDTH{1'b0}};
+    reg [RAM_WIDTH-1:0] ram_data_b = {RAM_WIDTH{1'b0}};
+
+    always @(posedge clka) begin
+        if (wea) BRAM[addra] <= dina;
+        ram_data_a <= BRAM[addra];
+    end
+
+    always @(posedge clkb) begin
+        if (web) BRAM[addrb] <= dinb;
+        ram_data_b <= BRAM[addrb];
+    end
+
+    // Add a 2 clock cycle read latency to improve clock-to-out timing
+    reg [RAM_WIDTH-1:0] douta_reg = {RAM_WIDTH{1'b0}};
+    reg [RAM_WIDTH-1:0] doutb_reg = {RAM_WIDTH{1'b0}};
+
+    always @(posedge clka) douta_reg <= ram_data_a;
+    always @(posedge clkb) doutb_reg <= ram_data_b;
+
+    assign douta = douta_reg;
+    assign doutb = doutb_reg;
 endmodule
 
 module bridge_tx (

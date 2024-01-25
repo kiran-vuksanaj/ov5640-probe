@@ -7,6 +7,8 @@ module top_level
    output logic [15:0] led,
    input wire [7:0]    pmoda,
    input wire [2:0]    pmodb,
+   inout wire 	       pmodb_scl,
+   inout wire 	       pmodb_sda,
    input wire [15:0]   sw,
    input wire [3:0]    btn,
    output logic [2:0]  rgb0,
@@ -502,12 +504,17 @@ module top_level
    // assign led[14] = read_axis_valid;
    // assign led[15] = hdmi_pixel_valid;
    // assign led[6] = hdmi_pixel_ready;
+   logic 	 busy, bus_active;
+   logic       cr_init_valid, cr_init_ready;
+   logic [23:0] bram_dout;
+   logic [8:0] 	bram_addr;
+   logic [3:0] 	ii_state;
 
    assign led[15:3] = {state[1:0], // 15:14
-		       sys_rst_camera, sys_rst_ui, sys_rst_pixel, // 13:11
-		       trigger_btn_camera, trigger_btn_ui, trigger_btn_pixel, // 10:8
-		       valid_cc, newframe_cc, phrase_axis_tuser, // 7:5
-		       2'b0 // 4:3
+		       ii_state, // 13:10
+		       bram_addr==0, pmodb_scl, // 9:8
+		       cr_init_valid, cr_init_ready, bram_dout==24'b0, // 7:5
+		       busy, bus_active // 4:3
 		       };
     
    ddr3_mig ddr3_mig_inst 
@@ -656,7 +663,83 @@ module top_level
    OBUFDS OBUFDS_clock(.I(clk_pixel), .O(hdmi_clk_p), .OB(hdmi_clk_n));
    
 
-   // ====================== CHAPTER: MANTA PROBE ===================
+   // ====================== CHAPTER: REGISTER WRITES ===================
+
+   // logic       cr_init_valid, cr_init_ready;
+   assign cr_init_valid = trigger_btn_camera;
+
+   // logic [23:0] register_sequence_dout;
+   // logic [8:0] 	register_sequence_addr;
+   
+   // manta manta_inst 
+   //   (
+   //    .clk(clk_camera),
+
+   //    .rx(uart_rxd),
+   //    .tx(uart_txd),
+
+   //    .ii_state(ii_state), 
+   //    .cr_init_valid(cr_init_valid), 
+   //    .cr_init_ready(cr_init_ready), 
+   //    .register_sequence_addr_p(register_sequence_addr), 
+   //    .register_sequence_dout_p(register_sequence_dout), 
+   //    .busy(busy), 
+   //    .bus_active(bus_active), 
+    
+      
+   //    .register_sequence_clk(clk_camera), 
+   //    .register_sequence_addr(register_sequence_addr), 
+   //    .register_sequence_din(24'b0), 
+   //    .register_sequence_dout(register_sequence_dout), 
+   //    .register_sequence_we(1'b0));
+
+   logic [23:0] bram_dout;
+   logic [7:0] 	bram_addr;
+   
+   
+   xilinx_single_port_ram_read_first
+     #(
+       .RAM_WIDTH(24),                       // Specify RAM data width
+       .RAM_DEPTH(256),                     // Specify RAM depth (number of entries)
+       .RAM_PERFORMANCE("HIGH_PERFORMANCE"), // Select "HIGH_PERFORMANCE" or "LOW_LATENCY" 
+       .INIT_FILE("/home/kiranv/Documents/fpga/cam/ov5640-probe")          // Specify name/location of RAM initialization file if using one (leave blank if not)
+       ) registers
+       (
+	.addra(bram_addr),     // Address bus, width determined from RAM_DEPTH
+	.dina(24'b0),       // RAM input data, width determined from RAM_WIDTH
+	.clka(clk_camera),       // Clock
+	.wea(1'b0),         // Write enable
+	.ena(1'b1),         // RAM Enable, for additional power savings, disable port when not in use
+	.rsta(sys_rst_camera),       // Output reset (does not affect memory contents)
+	.regcea(1'b1),   // Output register enable
+	.douta(bram_dout)      // RAM output data, width determined from RAM_WIDTH
+	);
+
+   logic       con_scl_i, con_scl_o, con_scl_t;
+   logic       con_sda_i, con_sda_o, con_sda_t;
+
+   assign con_scl_i = pmodb_scl;
+   assign pmodb_scl = con_scl_t ? 1'bz : con_scl_o;
+
+   assign con_sda_i = pmodb_sda;
+   assign pmodb_sda = con_sda_t ? 1'bz : con_sda_o;
+   
+   camera_registers crw
+     (.clk_in(clk_camera),
+      .rst_in(sys_rst_camera),
+      .init_valid(cr_init_valid),
+      .init_ready(cr_init_ready),
+      .scl_i(con_scl_i),
+      .scl_o(con_scl_o),
+      .scl_t(con_scl_t),
+      .sda_i(con_sda_i),
+      .sda_o(con_sda_o),
+      .sda_t(con_sda_t),
+      .bram_dout(bram_dout),
+      .bram_addr(bram_addr),
+      .busy(busy),
+      .bus_active(bus_active),
+      .state_out(ii_state));
 
    // manta connection: ui.yaml
    // manta manta_inst

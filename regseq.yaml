@@ -1,0 +1,28 @@
+---
+cores:
+  iic_la:
+    type: logic_analyzer
+    sample_depth: 8192
+    probes:
+      ii_state: 4
+      cr_init_valid: 1
+      cr_init_ready: 1
+      register_sequence_addr_p: 9
+      register_sequence_dout_p: 24
+      busy: 1
+      bus_active: 1
+
+    trigger_loc: 20
+    triggers:
+      - cr_init_valid RISING
+
+  register_sequence:
+    type: block_memory
+    width: 24
+    depth: 256
+
+uart:
+  port: "/dev/ttyUSB1"
+  baudrate: 3000000
+  clock_freq: 200000000
+  

@@ -2,7 +2,9 @@
 `default_nettype none
 
 module camera_registers
-  # (parameter RAM_DEPTH = 256)
+  #(
+    parameter RAM_DEPTH = 256,
+    parameter PRESCALE = 500)
   (
    input wire 				clk_in,
    input wire 				rst_in,
@@ -10,26 +12,34 @@ module camera_registers
    input wire 				init_valid,
    output logic 			init_ready,
 
-   inout wire 				scl_pin,
-   inout wire 				sda_pin,
+   input wire 				scl_i,
+   output logic 			scl_o,
+   output logic 			scl_t,
+   input wire 				sda_i,
+   output logic 			sda_o,
+   output logic 			sda_t,
 
    input wire [23:0] 			bram_dout,
-   output logic [$clog2(RAM_DEPTH)-1:0] bram_addr
+   output logic [$clog2(RAM_DEPTH)-1:0] bram_addr,
+
+   output logic 			busy,
+   output logic 			bus_active,
+   output logic [3:0] 			state_out
    );
 
    // goal: write sequence of registers as specified in a BRAM
    // it shall contain... a manta... perhaps...??
 
    // I2C ports
-   logic 	scl_i, scl_o, scl_t;
-   logic 	sda_i, sda_o, sda_t;
+   // logic 	scl_i, scl_o, scl_t;
+   // logic 	sda_i, sda_o, sda_t;
 
    // interface with tristate pins
-   assign scl_i = scl_pin;
-   assign scl_pin = scl_t ? 1'bz : scl_o;
+   // assign scl_i = scl_pin;
+   // assign scl_pin = scl_t ? 1'bz : scl_o;
 
-   assign sda_i  = sda_pin;
-   assign sda_pin = sda_t ? 1'bz : sda_o;
+   // assign sda_i  = sda_pin;
+   // assign sda_pin = sda_t ? 1'bz : sda_o;
 
 
    localparam ADDR = 7'h3C;
@@ -42,7 +52,8 @@ module camera_registers
    logic [7:0] 	write_tdata;
    logic 	write_tvalid, write_tready, write_tlast;
 
-   logic 	busy,bus_control,bus_active,missed_ack;
+   // logic 	busy,bus_control,bus_active,missed_ack;
+   logic 	bus_control, missed_ack;
    
 
    // progress through states:
@@ -63,6 +74,7 @@ module camera_registers
 		 WRITE_REGADDR_LO,
 		 WRITE_REGDATA} istate;
    istate state;
+   assign state_out = state;
 
    logic [$clog2(RAM_DEPTH)-1:0] next_regpair_addr;
    addr_increment #(.ROLLOVER(RAM_DEPTH)) aia
@@ -103,7 +115,8 @@ module camera_registers
 	   WRITE_REGPAIR: begin
 	      // if the bram is blank, stop trying to write and return to idle state
 	      regpair <= bram_dout;
-	      state <= (bram_dout == 24'b0) ? WAIT_INIT : ISSUE_CMD;
+	      // state <= (bram_dout == 24'b0) ? WAIT_INIT : ISSUE_CMD;
+	      state <= (next_regpair_addr > 220) ? WAIT_INIT : ISSUE_CMD;
 	   end
 	   ISSUE_CMD: begin
 	      state <= (cmd_valid && cmd_ready) ? WRITE_REGADDR_HI : ISSUE_CMD;
@@ -210,7 +223,7 @@ module camera_registers
       .bus_active(bus_active),
       .missed_ack(missed_ack),
 
-      .prescale(16'd500),
+      .prescale(PRESCALE),
 
       .scl_i(scl_i),
       .scl_o(scl_o),

@@ -45,7 +45,7 @@ module i2c_tb;
       rst_in = 1;
       #10;
       rst_in = 0;
-      #20;
+      #50;
       init_valid = 1;
       bram_dout = 24'hAABBCC;
       #10;

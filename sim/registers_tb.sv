@@ -57,6 +57,8 @@ module registers_tb;
    logic 	rcv_ready;
    logic 	rcv_last;
 
+   assign rcv_ready = 1;
+
    logic 	cam_scl_i, cam_scl_o, cam_scl_t;
    logic 	cam_sda_i, cam_sda_o, cam_sda_t;
 

@@ -72,7 +72,8 @@ module camera_registers
 		 ISSUE_CMD,
 		 WRITE_REGADDR_HI,
 		 WRITE_REGADDR_LO,
-		 WRITE_REGDATA} istate;
+		 WRITE_REGDATA,
+		 DONE} istate;
    istate state;
    assign state_out = state;
 
@@ -116,7 +117,7 @@ module camera_registers
 	      // if the bram is blank, stop trying to write and return to idle state
 	      regpair <= bram_dout;
 	      // state <= (bram_dout == 24'b0) ? WAIT_INIT : ISSUE_CMD;
-	      state <= (next_regpair_addr > 220) ? WAIT_INIT : ISSUE_CMD;
+	      state <= (next_regpair_addr > 220) ? DONE : ISSUE_CMD;
 	   end
 	   ISSUE_CMD: begin
 	      state <= (cmd_valid && cmd_ready) ? WRITE_REGADDR_HI : ISSUE_CMD;
@@ -130,6 +131,9 @@ module camera_registers
 	   WRITE_REGDATA: begin
 	      state <= (write_tvalid && write_tready) ? GET_REGPAIR : WRITE_REGDATA;
 	   end
+	   DONE: begin
+	      state <= DONE;
+	   end
 	 endcase // case (state)
       end
    end // always_ff @ (posedge clk_in)
@@ -141,7 +145,7 @@ module camera_registers
    
    always_comb begin
       case(state)
-	RST, WAIT_INIT, GET_REGPAIR, WAIT_REGPAIR: begin
+	RST, WAIT_INIT, GET_REGPAIR, WAIT_REGPAIR, DONE: begin
 	   cmd_start = 1'b0;
 	   cmd_write_multiple = 1'b0;
 	   cmd_stop = 1'b0;

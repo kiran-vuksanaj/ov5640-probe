@@ -668,8 +668,8 @@ module top_level
    // logic       cr_init_valid, cr_init_ready;
    assign cr_init_valid = trigger_btn_camera;
 
-   // logic [23:0] register_sequence_dout;
-   // logic [8:0] 	register_sequence_addr;
+   logic [23:0] register_sequence_dout;
+   logic [8:0] 	register_sequence_addr;
    
    // manta manta_inst 
    //   (
@@ -681,11 +681,12 @@ module top_level
    //    .ii_state(ii_state), 
    //    .cr_init_valid(cr_init_valid), 
    //    .cr_init_ready(cr_init_ready), 
-   //    .register_sequence_addr_p(register_sequence_addr), 
-   //    .register_sequence_dout_p(register_sequence_dout), 
+   //    .reg_bram_addr(bram_addr), 
+   //    .reg_bram_dout(bram_dout), 
    //    .busy(busy), 
-   //    .bus_active(bus_active), 
-    
+   //    .bus_active(bus_active),
+   //    .sda(pmodb_sda),
+   //    .scl(pmodb_scl),
       
    //    .register_sequence_clk(clk_camera), 
    //    .register_sequence_addr(register_sequence_addr), 
@@ -719,10 +720,10 @@ module top_level
    logic       con_sda_i, con_sda_o, con_sda_t;
 
    assign con_scl_i = pmodb_scl;
-   assign pmodb_scl = con_scl_t ? 1'bz : con_scl_o;
+   assign pmodb_scl = con_scl_o ? 1'bz : 0;
 
    assign con_sda_i = pmodb_sda;
-   assign pmodb_sda = con_sda_t ? 1'bz : con_sda_o;
+   assign pmodb_sda = con_sda_o ? 1'bz : 0;
    
    camera_registers crw
      (.clk_in(clk_camera),
@@ -764,20 +765,20 @@ module top_level
    //    .trigger_btn(trigger_btn_ui));
 
    // manta connection but on clk_camera: cam.yaml
-   // manta manta_inst 
-   //   (
-   //    .clk(clk_camera),
+   manta manta_inst 
+     (
+      .clk(clk_camera),
 
-   //    .rx(uart_rxd),
-   //    .tx(uart_txd),
+      .rx(uart_rxd),
+      .tx(uart_txd),
       
-   //    .valid_in(valid_cc), 
-   //    .ready_in(ready_builder), 
-   //    .newframe_in(newframe_cc), 
-   //    .valid_out(phrase_axis_valid), 
-   //    .ready_out(phrase_axis_ready), 
-   //    .tuser_out(phrase_axis_tuser),
-   //    .pclk_cam(pmodb_buf[0]));
+      .valid_in(valid_cc), 
+      .ready_in(ready_builder), 
+      .newframe_in(newframe_cc), 
+      .valid_out(phrase_axis_valid), 
+      .ready_out(phrase_axis_ready), 
+      .tuser_out(phrase_axis_tuser),
+      .pclk_cam(pmodb_buf[0]));
    
    
 endmodule // top_level

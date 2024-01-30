@@ -512,7 +512,7 @@ module top_level
 
    assign led[15:3] = {state[1:0], // 15:14
 		       ii_state, // 13:10
-		       bram_addr==0, pmodb_scl, // 9:8
+		       bram_addr==0, bram_dout==0, // 9:8
 		       cr_init_valid, cr_init_ready, bram_dout==24'b0, // 7:5
 		       busy, bus_active // 4:3
 		       };
@@ -703,7 +703,7 @@ module top_level
        .RAM_WIDTH(24),                       // Specify RAM data width
        .RAM_DEPTH(256),                     // Specify RAM depth (number of entries)
        .RAM_PERFORMANCE("HIGH_PERFORMANCE"), // Select "HIGH_PERFORMANCE" or "LOW_LATENCY" 
-       .INIT_FILE("/home/kiranv/Documents/fpga/cam/ov5640-probe")          // Specify name/location of RAM initialization file if using one (leave blank if not)
+       .INIT_FILE("/home/kiranv/Documents/fpga/cam/ov5640-probe/rom.mem")          // Specify name/location of RAM initialization file if using one (leave blank if not)
        ) registers
        (
 	.addra(bram_addr),     // Address bus, width determined from RAM_DEPTH
@@ -719,11 +719,14 @@ module top_level
    logic       con_scl_i, con_scl_o, con_scl_t;
    logic       con_sda_i, con_sda_o, con_sda_t;
 
-   assign con_scl_i = pmodb_scl;
-   assign pmodb_scl = con_scl_o ? 1'bz : 0;
+   // assign con_scl_i = pmodb_scl;
+   // assign pmodb_scl = con_scl_o ? 1'bz : 0;
 
-   assign con_sda_i = pmodb_sda;
-   assign pmodb_sda = con_sda_o ? 1'bz : 0;
+   // assign con_sda_i = pmodb_sda;
+   // assign pmodb_sda = con_sda_o ? 1'bz : 0;
+
+   IOBUF IOBUF_scl (.I(con_scl_o), .IO(pmodb_scl), .O(con_scl_i), .T(con_scl_t) );
+   IOBUF IOBUF_sda (.I(con_sda_o), .IO(pmodb_sda), .O(con_sda_i), .T(con_sda_t) );
    
    camera_registers crw
      (.clk_in(clk_camera),

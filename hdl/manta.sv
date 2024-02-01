@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 25 Jan 2024 at 16:54:38 by kiranv
+This module was generated with Manta v0.0.5 on 01 Feb 2024 at 14:35:55 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -16,13 +16,11 @@ manta manta_inst (
     .rx(rx),
     .tx(tx),
     
-    .valid_in(valid_in), 
-    .ready_in(ready_in), 
-    .newframe_in(newframe_in), 
-    .valid_out(valid_out), 
-    .ready_out(ready_out), 
-    .tuser_out(tuser_out), 
-    .pclk_cam(pclk_cam));
+    .register_sequence_clk(register_sequence_clk), 
+    .register_sequence_addr(register_sequence_addr), 
+    .register_sequence_din(register_sequence_din), 
+    .register_sequence_dout(register_sequence_dout), 
+    .register_sequence_we(register_sequence_we));
 
 */
 
@@ -32,13 +30,11 @@ module manta (
     input wire rx,
     output reg tx,
     
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam);
+    input wire register_sequence_clk,
+    input wire [7:0] register_sequence_addr,
+    input wire [23:0] register_sequence_din,
+    output reg [23:0] register_sequence_dout,
+    input wire register_sequence_we);
 
 
     uart_rx #(.CLOCKS_PER_BAUD(66)) urx (
@@ -57,47 +53,48 @@ module manta (
         .data_i(urx_brx_data),
         .valid_i(urx_brx_valid),
     
-        .addr_o(brx_cam_logic_analyzer_addr),
-        .data_o(brx_cam_logic_analyzer_data),
-        .rw_o(brx_cam_logic_analyzer_rw),
-        .valid_o(brx_cam_logic_analyzer_valid));
-    reg [15:0] brx_cam_logic_analyzer_addr;
-    reg [15:0] brx_cam_logic_analyzer_data;
-    reg brx_cam_logic_analyzer_rw;
-    reg brx_cam_logic_analyzer_valid;
+        .addr_o(brx_register_sequence_addr),
+        .data_o(brx_register_sequence_data),
+        .rw_o(brx_register_sequence_rw),
+        .valid_o(brx_register_sequence_valid));
+    reg [15:0] brx_register_sequence_addr;
+    reg [15:0] brx_register_sequence_data;
+    reg brx_register_sequence_rw;
+    reg brx_register_sequence_valid;
     
 
-    logic_analyzer cam_logic_analyzer (
+    block_memory #(
+        .WIDTH(24),
+        .DEPTH(256)
+    ) register_sequence (
         .clk(clk),
     
-        .addr_i(brx_cam_logic_analyzer_addr),
-        .data_i(brx_cam_logic_analyzer_data),
-        .rw_i(brx_cam_logic_analyzer_rw),
-        .valid_i(brx_cam_logic_analyzer_valid),
+        .addr_i(brx_register_sequence_addr),
+        .data_i(brx_register_sequence_data),
+        .rw_i(brx_register_sequence_rw),
+        .valid_i(brx_register_sequence_valid),
     
-        .valid_in(valid_in),
-        .ready_in(ready_in),
-        .newframe_in(newframe_in),
-        .valid_out(valid_out),
-        .ready_out(ready_out),
-        .tuser_out(tuser_out),
-        .pclk_cam(pclk_cam),
+        .user_clk(register_sequence_clk),
+        .user_addr(register_sequence_addr),
+        .user_din(register_sequence_din),
+        .user_dout(register_sequence_dout),
+        .user_we(register_sequence_we),
     
         .addr_o(),
-        .data_o(cam_logic_analyzer_btx_data),
-        .rw_o(cam_logic_analyzer_btx_rw),
-        .valid_o(cam_logic_analyzer_btx_valid));
+        .data_o(register_sequence_btx_data),
+        .rw_o(register_sequence_btx_rw),
+        .valid_o(register_sequence_btx_valid));
 
     
-    reg [15:0] cam_logic_analyzer_btx_data;
-    reg cam_logic_analyzer_btx_rw;
-    reg cam_logic_analyzer_btx_valid;
+    reg [15:0] register_sequence_btx_data;
+    reg register_sequence_btx_rw;
+    reg register_sequence_btx_valid;
     bridge_tx btx (
         .clk(clk),
     
-        .data_i(cam_logic_analyzer_btx_data),
-        .rw_i(cam_logic_analyzer_btx_rw),
-        .valid_i(cam_logic_analyzer_btx_valid),
+        .data_i(register_sequence_btx_data),
+        .rw_i(register_sequence_btx_rw),
+        .valid_i(register_sequence_btx_valid),
     
         .data_o(btx_utx_data),
         .start_o(btx_utx_start),
@@ -322,313 +319,6 @@ module bridge_rx (
 `endif // FORMAL
 endmodule
 
-module logic_analyzer (
-    input wire clk,
-
-    // probes
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam,
-
-    // input port
-    input wire [15:0] addr_i,
-    input wire [15:0] data_i,
-    input wire rw_i,
-    input wire valid_i,
-
-    // output port
-    output reg [15:0] addr_o,
-    output reg [15:0] data_o,
-    output reg rw_o,
-    output reg valid_o
-    );
-    localparam SAMPLE_DEPTH = 8192;
-    localparam ADDR_WIDTH = $clog2(SAMPLE_DEPTH);
-
-    reg [3:0] state;
-    reg [15:0] trigger_loc;
-    reg [1:0] trigger_mode;
-    reg request_start;
-    reg request_stop;
-    reg [ADDR_WIDTH-1:0] read_pointer;
-    reg [ADDR_WIDTH-1:0] write_pointer;
-
-    reg trig;
-
-    reg [ADDR_WIDTH-1:0] bram_addr;
-    reg bram_we;
-
-    localparam TOTAL_PROBE_WIDTH = 7;
-    reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
-    assign probes_concat = {pclk_cam, tuser_out, ready_out, valid_out, newframe_in, ready_in, valid_in};
-
-    logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
-        .clk(clk),
-
-        // from register file
-        .state(state),
-        .trigger_loc(trigger_loc),
-        .trigger_mode(trigger_mode),
-        .request_start(request_start),
-        .request_stop(request_stop),
-        .read_pointer(read_pointer),
-        .write_pointer(write_pointer),
-
-        // from trigger block
-        .trig(trig),
-
-        // from block memory user port
-        .bram_addr(bram_addr),
-        .bram_we(bram_we)
-    );
-
-    logic_analyzer_fsm_registers #(
-        .BASE_ADDR(0),
-        .SAMPLE_DEPTH(SAMPLE_DEPTH)
-        ) fsm_registers (
-        .clk(clk),
-
-        .addr_i(addr_i),
-        .data_i(data_i),
-        .rw_i(rw_i),
-        .valid_i(valid_i),
-
-        .addr_o(fsm_reg_trig_blk_addr),
-        .data_o(fsm_reg_trig_blk_data),
-        .rw_o(fsm_reg_trig_blk_rw),
-        .valid_o(fsm_reg_trig_blk_valid),
-
-        .state(state),
-        .trigger_loc(trigger_loc),
-        .trigger_mode(trigger_mode),
-        .request_start(request_start),
-        .request_stop(request_stop),
-        .read_pointer(read_pointer),
-        .write_pointer(write_pointer));
-
-    reg [15:0] fsm_reg_trig_blk_addr;
-    reg [15:0] fsm_reg_trig_blk_data;
-    reg fsm_reg_trig_blk_rw;
-    reg fsm_reg_trig_blk_valid;
-
-    // trigger block
-    trigger_block #(.BASE_ADDR(7)) trig_blk (
-        .clk(clk),
-
-        .valid_in(valid_in),
-        .ready_in(ready_in),
-        .newframe_in(newframe_in),
-        .valid_out(valid_out),
-        .ready_out(ready_out),
-        .tuser_out(tuser_out),
-        .pclk_cam(pclk_cam),
-
-        .trig(trig),
-
-        .addr_i(fsm_reg_trig_blk_addr),
-        .data_i(fsm_reg_trig_blk_data),
-        .rw_i(fsm_reg_trig_blk_rw),
-        .valid_i(fsm_reg_trig_blk_valid),
-
-        .addr_o(trig_blk_block_mem_addr),
-        .data_o(trig_blk_block_mem_data),
-        .rw_o(trig_blk_block_mem_rw),
-        .valid_o(trig_blk_block_mem_valid));
-
-    reg [15:0] trig_blk_block_mem_addr;
-    reg [15:0] trig_blk_block_mem_data;
-    reg trig_blk_block_mem_rw;
-    reg trig_blk_block_mem_valid;
-
-    // sample memory
-    block_memory #(
-        .BASE_ADDR(21),
-        .WIDTH(TOTAL_PROBE_WIDTH),
-        .DEPTH(SAMPLE_DEPTH)
-        ) block_mem (
-        .clk(clk),
-
-        // input port
-        .addr_i(trig_blk_block_mem_addr),
-        .data_i(trig_blk_block_mem_data),
-        .rw_i(trig_blk_block_mem_rw),
-        .valid_i(trig_blk_block_mem_valid),
-
-        // output port
-        .addr_o(addr_o),
-        .data_o(data_o),
-        .rw_o(rw_o),
-        .valid_o(valid_o),
-
-        // BRAM itself
-        .user_clk(clk),
-        .user_addr(bram_addr),
-        .user_din(probes_concat),
-        .user_dout(),
-        .user_we(bram_we));
-endmodule
-module logic_analyzer_controller (
-    input wire clk,
-
-    // from register file
-    output reg [3:0] state,
-    input wire [15:0] trigger_loc,
-    input wire [1:0] trigger_mode,
-    input wire request_start,
-    input wire request_stop,
-    output reg [ADDR_WIDTH-1:0] read_pointer,
-    output reg [ADDR_WIDTH-1:0] write_pointer,
-
-    // from trigger block
-    input wire trig,
-
-    // block memory user port
-    output reg [ADDR_WIDTH-1:0] bram_addr,
-    output reg bram_we
-    );
-
-    assign bram_addr = write_pointer;
-
-    parameter SAMPLE_DEPTH= 0;
-    localparam ADDR_WIDTH = $clog2(SAMPLE_DEPTH);
-
-    /* ----- FIFO ----- */
-    initial read_pointer = 0;
-    initial write_pointer = 0;
-
-    /* ----- FSM ----- */
-    localparam IDLE = 0;
-    localparam MOVE_TO_POSITION = 1;
-    localparam IN_POSITION = 2;
-    localparam CAPTURING = 3;
-    localparam CAPTURED = 4;
-
-    initial state = IDLE;
-
-    // rising edge detection for start/stop requests
-    reg prev_request_start;
-    always @(posedge clk) prev_request_start <= request_start;
-
-    reg prev_request_stop;
-    always @(posedge clk) prev_request_stop <= request_stop;
-
-    always @(posedge clk) begin
-        // don't do anything to the FIFO unless told to
-
-        if(state == IDLE) begin
-            write_pointer <= 0;
-            read_pointer <= 0;
-            bram_we <= 0;
-
-            if(request_start && ~prev_request_start) begin
-                state <= MOVE_TO_POSITION;
-            end
-        end
-
-        else if(state == MOVE_TO_POSITION) begin
-            write_pointer <= write_pointer + 1;
-            bram_we <= 1;
-
-            if(write_pointer == trigger_loc) begin
-                if(trig) state <= CAPTURING;
-                else state <= IN_POSITION;
-            end
-        end
-
-        else if(state == IN_POSITION) begin
-            write_pointer <= (write_pointer + 1) % SAMPLE_DEPTH;
-            read_pointer <= (read_pointer + 1) % SAMPLE_DEPTH;
-            bram_we <= 1;
-            if(trig) state <= CAPTURING;
-        end
-
-        else if(state == CAPTURING) begin
-            if(write_pointer == read_pointer) begin
-                bram_we <= 0;
-                state <= CAPTURED;
-            end
-
-            else write_pointer <= (write_pointer + 1) % SAMPLE_DEPTH;
-        end
-
-        if(request_stop && ~prev_request_stop) state <= IDLE;
-    end
-endmodule
-module logic_analyzer_fsm_registers(
-    input wire clk,
-
-    // input port
-    input wire [15:0] addr_i,
-    input wire [15:0] data_i,
-    input wire rw_i,
-    input wire valid_i,
-
-    // output port
-    output reg [15:0] addr_o,
-    output reg [15:0] data_o,
-    output reg rw_o,
-    output reg valid_o,
-
-    // registers
-    input wire [3:0] state,
-    output reg [15:0] trigger_loc,
-    output reg [1:0] trigger_mode,
-    output reg request_start,
-    output reg request_stop,
-    input wire [ADDR_WIDTH-1:0] read_pointer,
-    input wire [ADDR_WIDTH-1:0] write_pointer
-    );
-
-    initial trigger_loc = 0;
-    initial trigger_mode = 0;
-    initial request_start = 0;
-    initial request_stop = 0;
-
-    parameter BASE_ADDR = 0;
-    localparam MAX_ADDR = BASE_ADDR + 5;
-    parameter SAMPLE_DEPTH = 0;
-    parameter ADDR_WIDTH = $clog2(SAMPLE_DEPTH);
-
-    always @(posedge clk) begin
-        addr_o <= addr_i;
-        data_o <= data_i;
-        rw_o <= rw_i;
-        valid_o <= valid_i;
-
-        // check if address is valid
-        if( (valid_i) && (addr_i >= BASE_ADDR) && (addr_i <= MAX_ADDR)) begin
-
-            // reads
-            if(!rw_i) begin
-                case (addr_i)
-                    BASE_ADDR + 0: data_o <= state;
-                    BASE_ADDR + 1: data_o <= trigger_mode;
-                    BASE_ADDR + 2: data_o <= trigger_loc;
-                    BASE_ADDR + 3: data_o <= request_start;
-                    BASE_ADDR + 4: data_o <= request_stop;
-                    BASE_ADDR + 5: data_o <= read_pointer;
-                    BASE_ADDR + 6: data_o <= write_pointer;
-                endcase
-            end
-
-            // writes
-            else begin
-                case (addr_i)
-                    BASE_ADDR + 1: trigger_mode <= data_i;
-                    BASE_ADDR + 2: trigger_loc <= data_i;
-                    BASE_ADDR + 3: request_start <= data_i;
-                    BASE_ADDR + 4: request_stop <= data_i;
-                endcase
-            end
-        end
-    end
-
-
-endmodule
 module block_memory (
     input wire clk,
 
@@ -797,211 +487,6 @@ module dual_port_bram #(
 
     assign douta = douta_reg;
     assign doutb = doutb_reg;
-endmodule
-module trigger_block (
-    input wire clk,
-
-    // probes
-    input wire valid_in,
-    input wire ready_in,
-    input wire newframe_in,
-    input wire valid_out,
-    input wire ready_out,
-    input wire tuser_out,
-    input wire pclk_cam,
-
-    // trigger
-    output reg trig,
-
-    // input port
-    input wire [15:0] addr_i,
-    input wire [15:0] data_i,
-    input wire rw_i,
-    input wire valid_i,
-
-    // output port
-    output reg [15:0] addr_o,
-    output reg [15:0] data_o,
-    output reg rw_o,
-    output reg valid_o);
-
-    parameter BASE_ADDR = 0;
-    localparam MAX_ADDR = 21;
-
-    // trigger configuration registers
-    // - each probe gets an operation and a compare register
-    // - at the end we OR them all together. along with any custom probes the user specs
-
-    reg [3:0] valid_in_op = 0;
-    reg valid_in_arg = 0;
-    reg valid_in_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) valid_in_trigger (
-        .clk(clk),
-    
-        .probe(valid_in),
-        .op(valid_in_op),
-        .arg(valid_in_arg),
-        .trig(valid_in_trig));
-    reg [3:0] ready_in_op = 0;
-    reg ready_in_arg = 0;
-    reg ready_in_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) ready_in_trigger (
-        .clk(clk),
-    
-        .probe(ready_in),
-        .op(ready_in_op),
-        .arg(ready_in_arg),
-        .trig(ready_in_trig));
-    reg [3:0] newframe_in_op = 0;
-    reg newframe_in_arg = 0;
-    reg newframe_in_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) newframe_in_trigger (
-        .clk(clk),
-    
-        .probe(newframe_in),
-        .op(newframe_in_op),
-        .arg(newframe_in_arg),
-        .trig(newframe_in_trig));
-    reg [3:0] valid_out_op = 0;
-    reg valid_out_arg = 0;
-    reg valid_out_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) valid_out_trigger (
-        .clk(clk),
-    
-        .probe(valid_out),
-        .op(valid_out_op),
-        .arg(valid_out_arg),
-        .trig(valid_out_trig));
-    reg [3:0] ready_out_op = 0;
-    reg ready_out_arg = 0;
-    reg ready_out_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) ready_out_trigger (
-        .clk(clk),
-    
-        .probe(ready_out),
-        .op(ready_out_op),
-        .arg(ready_out_arg),
-        .trig(ready_out_trig));
-    reg [3:0] tuser_out_op = 0;
-    reg tuser_out_arg = 0;
-    reg tuser_out_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) tuser_out_trigger (
-        .clk(clk),
-    
-        .probe(tuser_out),
-        .op(tuser_out_op),
-        .arg(tuser_out_arg),
-        .trig(tuser_out_trig));
-    reg [3:0] pclk_cam_op = 0;
-    reg pclk_cam_arg = 0;
-    reg pclk_cam_trig;
-    
-    trigger #(.INPUT_WIDTH(1)) pclk_cam_trigger (
-        .clk(clk),
-    
-        .probe(pclk_cam),
-        .op(pclk_cam_op),
-        .arg(pclk_cam_arg),
-        .trig(pclk_cam_trig));
-
-   assign trig = valid_in_trig || ready_in_trig || newframe_in_trig || valid_out_trig || ready_out_trig || tuser_out_trig || pclk_cam_trig;
-
-    // perform register operations
-    always @(posedge clk) begin
-        addr_o <= addr_i;
-        data_o <= data_i;
-        rw_o <= rw_i;
-        valid_o <= valid_i;
-
-        if( (addr_i >= BASE_ADDR) && (addr_i <= BASE_ADDR + MAX_ADDR) ) begin
-
-            // reads
-            if(valid_i && !rw_i) begin
-                case (addr_i)
-                    BASE_ADDR + 0: data_o <= valid_in_op;
-                    BASE_ADDR + 1: data_o <= valid_in_arg;
-                    BASE_ADDR + 2: data_o <= ready_in_op;
-                    BASE_ADDR + 3: data_o <= ready_in_arg;
-                    BASE_ADDR + 4: data_o <= newframe_in_op;
-                    BASE_ADDR + 5: data_o <= newframe_in_arg;
-                    BASE_ADDR + 6: data_o <= valid_out_op;
-                    BASE_ADDR + 7: data_o <= valid_out_arg;
-                    BASE_ADDR + 8: data_o <= ready_out_op;
-                    BASE_ADDR + 9: data_o <= ready_out_arg;
-                    BASE_ADDR + 10: data_o <= tuser_out_op;
-                    BASE_ADDR + 11: data_o <= tuser_out_arg;
-                    BASE_ADDR + 12: data_o <= pclk_cam_op;
-                    BASE_ADDR + 13: data_o <= pclk_cam_arg;
-                endcase
-            end
-
-            // writes
-            else if(valid_i && rw_i) begin
-                case (addr_i)
-                    BASE_ADDR + 0: valid_in_op <= data_i;
-                    BASE_ADDR + 1: valid_in_arg <= data_i;
-                    BASE_ADDR + 2: ready_in_op <= data_i;
-                    BASE_ADDR + 3: ready_in_arg <= data_i;
-                    BASE_ADDR + 4: newframe_in_op <= data_i;
-                    BASE_ADDR + 5: newframe_in_arg <= data_i;
-                    BASE_ADDR + 6: valid_out_op <= data_i;
-                    BASE_ADDR + 7: valid_out_arg <= data_i;
-                    BASE_ADDR + 8: ready_out_op <= data_i;
-                    BASE_ADDR + 9: ready_out_arg <= data_i;
-                    BASE_ADDR + 10: tuser_out_op <= data_i;
-                    BASE_ADDR + 11: tuser_out_arg <= data_i;
-                    BASE_ADDR + 12: pclk_cam_op <= data_i;
-                    BASE_ADDR + 13: pclk_cam_arg <= data_i;
-                endcase
-            end
-        end
-    end
-endmodule
-module trigger (
-    input wire clk,
-
-    input wire [INPUT_WIDTH-1:0] probe,
-    input wire [3:0] op,
-    input wire [INPUT_WIDTH-1:0] arg,
-
-    output reg trig);
-
-    parameter INPUT_WIDTH = 0;
-
-    localparam DISABLE = 0;
-    localparam RISING = 1;
-    localparam FALLING = 2;
-    localparam CHANGING = 3;
-    localparam GT = 4;
-    localparam LT = 5;
-    localparam GEQ = 6;
-    localparam LEQ = 7;
-    localparam EQ = 8;
-    localparam NEQ = 9;
-
-    reg [INPUT_WIDTH-1:0] probe_prev = 0;
-    always @(posedge clk) probe_prev <= probe;
-
-    always @(*) begin
-        case (op)
-            RISING :    trig = (probe > probe_prev);
-            FALLING :   trig = (probe < probe_prev);
-            CHANGING :  trig = (probe != probe_prev);
-            GT:         trig = (probe > arg);
-            LT:         trig = (probe < arg);
-            GEQ:        trig = (probe >= arg);
-            LEQ:        trig = (probe <= arg);
-            EQ:         trig = (probe == arg);
-            NEQ:        trig = (probe != arg);
-            default:    trig = 0;
-        endcase
-    end
 endmodule
 
 module bridge_tx (

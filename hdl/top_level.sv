@@ -510,14 +510,14 @@ module top_level
    // assign led[6] = hdmi_pixel_ready;
    logic 	 busy, bus_active;
    logic       cr_init_valid, cr_init_ready;
-   logic [23:0] bram_dout;
-   logic [8:0] 	bram_addr;
+   logic [23:0] registers_dout;
+   logic [8:0] 	registers_addr;
    logic [3:0] 	ii_state;
 
    assign led[15:3] = {state[1:0], // 15:14
 		       ii_state, // 13:10
-		       bram_addr==0, bram_dout==0, // 9:8
-		       cr_init_valid, cr_init_ready, bram_dout==24'b0, // 7:5
+		       registers_addr==0, registers_dout==0, // 9:8
+		       cr_init_valid, cr_init_ready, registers_dout==24'b0, // 7:5
 		       busy, bus_active // 4:3
 		       };
     
@@ -672,31 +672,31 @@ module top_level
    // logic       cr_init_valid, cr_init_ready;
    assign cr_init_valid = trigger_btn_camera;
 
-   logic [23:0] register_sequence_dout;
-   logic [8:0] 	register_sequence_addr;
+   logic [23:0] mram_dout;
+   logic [8:0] 	mram_addr;
    
-   // manta manta_inst 
-   //   (
-   //    .clk(clk_camera),
+   manta manta_inst 
+     (
+      .clk(clk_camera),
 
-   //    .rx(uart_rxd),
-   //    .tx(uart_txd),
+      .rx(uart_rxd),
+      .tx(uart_txd),
 
-   //    .ii_state(ii_state), 
-   //    .cr_init_valid(cr_init_valid), 
-   //    .cr_init_ready(cr_init_ready), 
-   //    .reg_bram_addr(bram_addr), 
-   //    .reg_bram_dout(bram_dout), 
-   //    .busy(busy), 
-   //    .bus_active(bus_active),
-   //    .sda(pmodb_sda),
-   //    .scl(pmodb_scl),
+      // .ii_state(ii_state), 
+      // .cr_init_valid(cr_init_valid), 
+      // .cr_init_ready(cr_init_ready), 
+      // .reg_bram_addr(bram_addr), 
+      // .reg_bram_dout(bram_dout), 
+      // .busy(busy), 
+      // .bus_active(bus_active),
+      // .sda(pmodb_sda),
+      // .scl(pmodb_scl),
       
-   //    .register_sequence_clk(clk_camera), 
-   //    .register_sequence_addr(register_sequence_addr), 
-   //    .register_sequence_din(24'b0), 
-   //    .register_sequence_dout(register_sequence_dout), 
-   //    .register_sequence_we(1'b0));
+      .register_sequence_clk(clk_camera), 
+      .register_sequence_addr(mram_addr), 
+      .register_sequence_din(24'b0), 
+      .register_sequence_dout(mram_dout), 
+      .register_sequence_we(1'b0));
 
    logic [23:0] bram_dout;
    logic [7:0] 	bram_addr;
@@ -720,6 +720,12 @@ module top_level
 	.douta(bram_dout)      // RAM output data, width determined from RAM_WIDTH
 	);
 
+   // logic [23:0] registers_dout;
+   // logic [7:0] 	registers_addr;
+   assign registers_dout = sw[2] ? mram_dout : bram_dout;
+   assign bram_addr = registers_addr;
+   assign mram_addr = registers_addr;
+   
    logic       con_scl_i, con_scl_o, con_scl_t;
    logic       con_sda_i, con_sda_o, con_sda_t;
 
@@ -744,8 +750,8 @@ module top_level
       .sda_i(con_sda_i),
       .sda_o(con_sda_o),
       .sda_t(con_sda_t),
-      .bram_dout(bram_dout),
-      .bram_addr(bram_addr),
+      .bram_dout(registers_dout),
+      .bram_addr(registers_addr),
       .busy(busy),
       .bus_active(bus_active),
       .state_out(ii_state));
@@ -773,20 +779,20 @@ module top_level
    //    .trigger_btn(trigger_btn_ui));
 
    // manta connection but on clk_camera: cam.yaml
-   manta manta_inst 
-     (
-      .clk(clk_camera),
+   // manta manta_inst 
+   //   (
+   //    .clk(clk_camera),
 
-      .rx(uart_rxd),
-      .tx(uart_txd),
+   //    .rx(uart_rxd),
+   //    .tx(uart_txd),
       
-      .valid_in(valid_cc), 
-      .ready_in(ready_builder), 
-      .newframe_in(newframe_cc), 
-      .valid_out(phrase_axis_valid), 
-      .ready_out(phrase_axis_ready), 
-      .tuser_out(phrase_axis_tuser),
-      .pclk_cam(pmodb_buf[0]));
+   //    .valid_in(valid_cc), 
+   //    .ready_in(ready_builder), 
+   //    .newframe_in(newframe_cc), 
+   //    .valid_out(phrase_axis_valid), 
+   //    .ready_out(phrase_axis_ready), 
+   //    .tuser_out(phrase_axis_tuser),
+   //    .pclk_cam(pmodb_buf[0]));
    
    
 endmodule // top_level

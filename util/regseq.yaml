@@ -1,22 +1,22 @@
 ---
 cores:
-  iic_la:
-    type: logic_analyzer
-    sample_depth: 16384
-    probes:
-      ii_state: 4
-      cr_init_valid: 1
-      cr_init_ready: 1
-      reg_bram_addr: 8
-      reg_bram_dout: 24
-      sda: 1
-      scl: 1
-      busy: 1
-      bus_active: 1
+  # iic_la:
+  #   type: logic_analyzer
+  #   sample_depth: 16384
+  #   probes:
+  #     ii_state: 4
+  #     cr_init_valid: 1
+  #     cr_init_ready: 1
+  #     reg_bram_addr: 8
+  #     reg_bram_dout: 24
+  #     sda: 1
+  #     scl: 1
+  #     busy: 1
+  #     bus_active: 1
 
-    trigger_loc: 20
-    triggers:
-      - scl FALLING
+  #   trigger_loc: 20
+  #   triggers:
+  #     - scl FALLING
 
   register_sequence:
     type: block_memory

@@ -725,7 +725,10 @@ module top_level
    // assign con_sda_i = pmodb_sda;
    // assign pmodb_sda = con_sda_o ? 1'bz : 0;
 
+   (* PULLUP = "TRUE" *)
    IOBUF IOBUF_scl (.I(con_scl_o), .IO(pmodb_scl), .O(con_scl_i), .T(con_scl_t) );
+
+   (* PULLUP = "TRUE" *)
    IOBUF IOBUF_sda (.I(con_sda_o), .IO(pmodb_sda), .O(con_sda_i), .T(con_sda_t) );
    
    camera_registers crw

@@ -59,6 +59,7 @@
 // _clk_100__100.00000______0.000______50.0______130.958_____98.575
 // _clk_mig__200.00000______0.000______50.0______114.829_____98.575
 // clk_camera__200.00000______0.000______50.0______114.829_____98.575
+// __clk_xc__25.00000______0.000______50.0______175.402_____98.575
 //
 //----------------------------------------------------------------------------
 // Input Clock   Freq (MHz)    Input Jitter (UI)
@@ -74,6 +75,7 @@ module cw_fast_clk_wiz
   output        clk_100,
   output        clk_mig,
   output        clk_camera,
+  output        clk_xc,
   // Status and control signals
   input         reset,
   output        locked,
@@ -100,7 +102,7 @@ wire clk_in2_cw_fast;
   wire        clk_100_cw_fast;
   wire        clk_mig_cw_fast;
   wire        clk_camera_cw_fast;
-  wire        clk_out4_cw_fast;
+  wire        clk_xc_cw_fast;
   wire        clk_out5_cw_fast;
   wire        clk_out6_cw_fast;
   wire        clk_out7_cw_fast;
@@ -112,7 +114,6 @@ wire clk_in2_cw_fast;
   wire        clkfbout_cw_fast;
   wire        clkfbout_buf_cw_fast;
   wire        clkfboutb_unused;
-   wire clkout3_unused;
    wire clkout4_unused;
   wire        clkout5_unused;
   wire        clkout6_unused;
@@ -136,6 +137,9 @@ wire clk_in2_cw_fast;
     .CLKOUT2_DIVIDE       (5),
     .CLKOUT2_PHASE        (0.000),
     .CLKOUT2_DUTY_CYCLE   (0.500),
+    .CLKOUT3_DIVIDE       (40),
+    .CLKOUT3_PHASE        (0.000),
+    .CLKOUT3_DUTY_CYCLE   (0.500),
     .CLKIN1_PERIOD        (10.000))
   plle2_adv_inst
     // Output clocks
@@ -144,7 +148,7 @@ wire clk_in2_cw_fast;
     .CLKOUT0             (clk_100_cw_fast),
     .CLKOUT1             (clk_mig_cw_fast),
     .CLKOUT2             (clk_camera_cw_fast),
-    .CLKOUT3             (clkout3_unused),
+    .CLKOUT3             (clk_xc_cw_fast),
     .CLKOUT4             (clkout4_unused),
     .CLKOUT5             (clkout5_unused),
      // Input clock control
@@ -194,6 +198,10 @@ wire clk_in2_cw_fast;
   BUFG clkout3_buf
    (.O   (clk_camera),
     .I   (clk_camera_cw_fast));
+
+  BUFG clkout4_buf
+   (.O   (clk_xc),
+    .I   (clk_xc_cw_fast));
 
 
 

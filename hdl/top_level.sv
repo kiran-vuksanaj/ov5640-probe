@@ -7,6 +7,7 @@ module top_level
    output logic [15:0] led,
    input wire [7:0]    pmoda,
    input wire [2:0]    pmodb,
+   output logic        pmodb_clk,
    inout wire 	       pmodb_scl,
    inout wire 	       pmodb_sda,
    input wire [15:0]   sw,
@@ -58,6 +59,7 @@ module top_level
    logic 	       clk_migref;
    logic 	       clk_pixel;
    logic 	       clk_5x;
+   logic 	       clk_xc;
 
    logic 	       ui_clk;
    logic 	       ui_clk_sync_rst;
@@ -75,8 +77,10 @@ module top_level
      (.clk_in1(clk_100mhz),
       .clk_mig(clk_migref),
       .clk_camera(clk_camera),
+      .clk_xc(clk_xc),
       .clk_100(clk_100_passthrough),
       .reset(0));
+   assign pmodb_clk = clk_xc;
 
 
    debouncer dbr
@@ -725,10 +729,8 @@ module top_level
    // assign con_sda_i = pmodb_sda;
    // assign pmodb_sda = con_sda_o ? 1'bz : 0;
 
-   (* PULLUP = "TRUE" *)
+   // NOTE these also have pullup specified in the xdc file!
    IOBUF IOBUF_scl (.I(con_scl_o), .IO(pmodb_scl), .O(con_scl_i), .T(con_scl_t) );
-
-   (* PULLUP = "TRUE" *)
    IOBUF IOBUF_sda (.I(con_sda_o), .IO(pmodb_sda), .O(con_sda_i), .T(con_sda_t) );
    
    camera_registers crw

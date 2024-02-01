@@ -5,7 +5,7 @@ cam = adafruit_ov5640.OV5640(size=adafruit_ov5640.OV5640_SIZE_HD)
 
 cam.colorspace = adafruit_ov5640.OV5640_COLOR_RGB
 
-cam.flip_y = True
+cam.flip_y = False
 cam.flip_x = False
 
 cam.test_pattern = False

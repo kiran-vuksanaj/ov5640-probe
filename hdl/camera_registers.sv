@@ -116,8 +116,8 @@ module camera_registers
 	   WRITE_REGPAIR: begin
 	      // if the bram is blank, stop trying to write and return to idle state
 	      regpair <= bram_dout;
-	      // state <= (bram_dout == 24'b0) ? DONE : ISSUE_CMD;
-	      state <= (next_regpair_addr > 228) ? DONE : ISSUE_CMD;
+	      state <= (bram_dout == 24'b0) ? WAIT_INIT : ISSUE_CMD;
+	      // state <= (next_regpair_addr > 228) ? DONE : ISSUE_CMD;
 	   end
 	   ISSUE_CMD: begin
 	      state <= (cmd_valid && cmd_ready) ? WRITE_REGADDR_HI : ISSUE_CMD;

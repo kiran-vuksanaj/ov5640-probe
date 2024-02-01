@@ -703,7 +703,7 @@ module top_level
        .RAM_WIDTH(24),                       // Specify RAM data width
        .RAM_DEPTH(256),                     // Specify RAM depth (number of entries)
        .RAM_PERFORMANCE("HIGH_PERFORMANCE"), // Select "HIGH_PERFORMANCE" or "LOW_LATENCY" 
-       .INIT_FILE("/home/kiranv/Documents/fpga/cam/ov5640-probe/rom.mem")          // Specify name/location of RAM initialization file if using one (leave blank if not)
+       .INIT_FILE("rom.mem")          // Specify name/location of RAM initialization file if using one (leave blank if not)
        ) registers
        (
 	.addra(bram_addr),     // Address bus, width determined from RAM_DEPTH

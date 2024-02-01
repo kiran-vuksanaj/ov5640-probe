@@ -1,0 +1,1 @@
+# directory for simulation and capture vcd files

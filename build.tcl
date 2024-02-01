@@ -21,7 +21,7 @@ read_verilog -sv [ glob ./hdl/*.sv ]
 read_verilog  [ glob ./hdl/*.v ]
 read_xdc ./xdc/top_level.xdc
 #we'll use this later:
-# read_mem [ glob ./data/*.mem ]
+read_mem [ glob ./data/*.mem ]
 
 # set the part number so Vivado knows how to build (each FPGA is different)
 set_part $partNum

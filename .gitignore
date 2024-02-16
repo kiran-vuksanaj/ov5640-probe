@@ -65,3 +65,4 @@ venv/
 tight_setup_hold_pins.txt
 
 /__pycache__/
+*/__pycache__/

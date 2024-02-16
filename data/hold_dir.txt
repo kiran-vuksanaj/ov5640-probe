@@ -1,0 +1,1 @@
+# this directory for initialization data in the vivado script

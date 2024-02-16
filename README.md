@@ -49,7 +49,7 @@ sw[2] :: mode for camera register writes
 * btn[0] : system reset
 * btn[1] : write registers to the camera
 
-### Real-time Board
+### Real-time Register List
 TODO: explain how to use the manta core
 
 ## IP/Core Usage
@@ -60,11 +60,12 @@ TODO: explain how to use the manta core
 * Manta, by Fischer Moseley, to communicate by 
 
 ## Reference Documentation
-* [RealDigital Urbana Board Manual]()
-* [Spartan 7 S-50 FPGA]()
-* [Adafruit OV5640 Breakout Board]()
-* [Adafruit OV5640 MicroPython Library]()
-* [OV5640 Register Datasheet]()
+* [RealDigital Urbana Board Manual](https://www.realdigital.org/doc/496fed57c6b275735fe24c85de5718c2)
+* [Spartan 7 S50 FPGA](https://www.xilinx.com/products/silicon-devices/fpga/spartan-7.html)
+* [Adafruit OV5640 Breakout Board](https://learn.adafruit.com/adafruit-ov5640-camera-breakout/overview)
+* [Adafruit OV5640 MicroPython Library](https://docs.circuitpython.org/projects/ov5640/en/latest/)
+* [OV5640 Register Datasheet](https://cdn-learn.adafruit.com/assets/assets/000/118/994/original/OV5640_datasheet.pdf?1677598686)
+* [Manta by Fischer Moseley](https://fischermoseley.github.io/manta/)
 
 ## Future Goals
 

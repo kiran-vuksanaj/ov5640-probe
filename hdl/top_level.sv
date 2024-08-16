@@ -14,11 +14,18 @@ module top_level
   (
    input wire 	       clk_100mhz,
    output logic [15:0] led,
-   input wire [7:0]    pmoda,
-   input wire [2:0]    pmodb,
-   output logic        pmodb_clk,
-   inout wire 	       pmodb_scl,
-   inout wire 	       pmodb_sda,
+   input wire [7:0]    camera_d,
+   output logic        cam_xclk,
+   input wire 	       cam_hsync,
+   input wire 	       cam_vsync,
+   input wire 	       cam_pclk,
+   inout wire 	       i2c_scl,
+   inout wire 	       i2c_sda,
+   // input wire [7:0]    pmoda,
+   // input wire [2:0]    pmodb,
+   // output logic        pmodb_clk,
+   // inout wire 	       pmodb_scl,
+   // inout wire 	       pmodb_sda,
    input wire [15:0]   sw,
    input wire [3:0]    btn,
    output logic [2:0]  rgb0,
@@ -89,7 +96,7 @@ module top_level
       .clk_xc(clk_xc),
       .clk_100(clk_100_passthrough),
       .reset(0));
-   assign pmodb_clk = clk_xc;
+   assign cam_xclk = clk_xc;
 
 
    debouncer dbr
@@ -163,12 +170,11 @@ module top_level
    logic 	       valid_byte;
       
    // buffering
-   logic [2:0] 	       pmodb_buf0;
-   logic [7:0] 	       pmoda_buf0;
+   logic [7:0] 	       camera_d_buf [1:0];
+   logic 	       cam_hsync_buf [1:0];
+   logic 	       cam_vsync_buf [1:0];
+   logic 	       cam_pclk_buf [1:0];
    
-   logic [2:0] 	       pmodb_buf; // buffer, to make sure values only update on our clock domain!p
-   logic [7:0] 	       pmoda_buf;
-
    // HDMI output wires
 
    // video signal generator
@@ -211,20 +217,19 @@ module top_level
 
    // ==================== CHAPTER: CAMERA CAPTURE =======================
    always_ff @(posedge clk_camera) begin
-      pmoda_buf0 <= pmoda;
-      pmodb_buf0 <= pmodb;
-      
-      pmoda_buf <= pmoda_buf0;
-      pmodb_buf <= pmodb_buf0;
+      camera_d_buf <= {camera_d, camera_d_buf[0]};
+      cam_pclk_buf <= {cam_pclk, cam_pclk_buf[0]};
+      cam_hsync_buf <= {cam_hsync, cam_hsync_buf[0]};
+      cam_vsync_buf <= {cam_vsync, cam_vsync_buf[0]};
    end
 
    camera_bare cbm
      (.clk_pixel_in(clk_camera),
-      .pclk_cam_in(pmodb_buf[0] ),
-      .hs_cam_in(pmodb_buf[2]),
-      .vs_cam_in(pmodb_buf[1]),
+      .pclk_cam_in(cam_pclk_buf[1]),
+      .hs_cam_in(cam_hsync_buf[1]),
+      .vs_cam_in(cam_vsync_buf[1]),
       .rst_in(sys_rst_camera),
-      .data_cam_in(pmoda_buf),
+      .data_cam_in(camera_d_buf[1]),
       .hs_cam_out(hsync_raw),
       .vs_cam_out(vsync_raw),
       .data_out(data),
@@ -283,7 +288,7 @@ module top_level
       .tuser_out(phrase_axis_tuser)
       );
 
-   channel_update write_addr_cmd = {27'b0, 1280*720>>3,1'b1};
+   channel_update write_addr_cmd = {27'b0, 27'(1280*720>>3),1'b1};
    assign phrase_axis_data = phrase_axis_tuser ? write_addr_cmd : cam_phrase_data;
 
    // ======================= CHAPTER : SEVEN SEGMENT PROBE ======================
@@ -822,8 +827,8 @@ module top_level
    // assign pmodb_sda = con_sda_o ? 1'bz : 0;
 
    // NOTE these also have pullup specified in the xdc file!
-   IOBUF IOBUF_scl (.I(con_scl_o), .IO(pmodb_scl), .O(con_scl_i), .T(con_scl_t) );
-   IOBUF IOBUF_sda (.I(con_sda_o), .IO(pmodb_sda), .O(con_sda_i), .T(con_sda_t) );
+   IOBUF IOBUF_scl (.I(con_scl_o), .IO(i2c_scl), .O(con_scl_i), .T(con_scl_t) );
+   IOBUF IOBUF_sda (.I(con_sda_o), .IO(i2c_sda), .O(con_sda_i), .T(con_sda_t) );
    
    camera_registers crw
      (.clk_in(clk_camera),

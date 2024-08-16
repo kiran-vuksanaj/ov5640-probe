@@ -243,7 +243,7 @@ module traffic_merger #
 	 // WRITE command for MIG from current_channel
 
 	 // address offset by 7: 128-bit address becomes 1-bit address (what the MIG wants)
-	 app_addr = cmd_addr[current_channel] << 7;
+	 app_addr = cmd_addr[current_channel] << 3;
 	 app_cmd = CMD_WRITE;
 	 app_en = 1'b1;
 	 app_wdf_wren = 1'b1;
@@ -256,7 +256,7 @@ module traffic_merger #
 	 // READ command for MIG from current_channel
 
 	 // address offset by 7: 128-bit address becomes 1-bit address (what the MIG wants)
-	 app_addr = cmd_addr[current_channel] << 7;
+	 app_addr = cmd_addr[current_channel] << 3;
 	 app_cmd = CMD_READ;
 	 app_en = 1'b1;
 	 app_wdf_wren = 1'b0;

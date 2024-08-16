@@ -24,14 +24,14 @@ module build_wr_data
    logic 		 phrase_taken;
    logic 		 tuser_hold;
       
-   assign data_out = {words[0],
-		      words[1],
-		      words[2],
-		      words[3],
-		      words[4],
-		      words[5],
+   assign data_out = {words[7],
 		      words[6],
-		      words[7]};
+		      words[5],
+		      words[4],
+		      words[3],
+		      words[2],
+		      words[1],
+		      words[0]};
 
    addr_increment #(.ROLLOVER(8)) aio
      (.clk_in(clk_in),
@@ -96,14 +96,14 @@ module digest_phrase
    logic [127:0]       phrase;
    logic 	       tuser;
    logic [15:0]        words[7:0]; // unpacked phrase
-   assign words[7] = phrase[15:0];
-   assign words[6] = phrase[31:16];
-   assign words[5] = phrase[47:32];
-   assign words[4] = phrase[63:48];
-   assign words[3] = phrase[79:64];
-   assign words[2] = phrase[95:80];
-   assign words[1] = phrase[111:96];
-   assign words[0] = phrase[127:112];
+   assign words[0] = phrase[15:0];
+   assign words[1] = phrase[31:16];
+   assign words[2] = phrase[47:32];
+   assign words[3] = phrase[63:48];
+   assign words[4] = phrase[79:64];
+   assign words[5] = phrase[95:80];
+   assign words[6] = phrase[111:96];
+   assign words[7] = phrase[127:112];
 
    logic 	       needphrase;
    

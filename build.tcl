@@ -19,7 +19,7 @@ if {[llength $files] != 0} {
 read_verilog -sv [ glob ./hdl/*.sv ]
 # uncomment line below if verilog (.v) files present:
 read_verilog  [ glob ./hdl/*.v ]
-read_xdc ./xdc/top_level.xdc
+read_xdc [ glob ./xdc/*.xdc ]
 #we'll use this later:
 read_mem [ glob ./data/*.mem ]
 

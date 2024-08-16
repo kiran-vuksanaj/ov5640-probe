@@ -15,22 +15,15 @@ The `build.tcl` script can be used to run synthesis and routing through Vivado w
 This script generates a bitstream suited for the board, which can then be loaded to the board.
 ```openFPGAloader -b arty_s7_50 obj/final.bit```
 
+3. Configure Camera Settings
+When the script starts up, the HDMI output shows stripe-y patterns, the unmodified data in the DRAM chip.
+
+Set `sw[2]` to 1'b0 (down) to referencce the ROM memory settings, and press `btn[1]` to program the camera.
+
+
 ## Wiring Layout
 
-The `xdc/top_level.xdc` file is intended for the Urbana Board, configuring standard i/o devices (LEDs, switches, etc) as well as the PMOD connectors and the HDMI port.
-* PMODA is connected to data pins D2-D9 of the OV5640 breakout board, which
-* PMODB is connected to the other relevant signals:
-  * PMODB[0] <-- Pixel Clock (PC)
-  * PMODB[1] <-- Horizontal Sync (HS)
-  * PMODB[2] <-- Vertical Sync (VS)
-  * PMODB[3] --> External Clock (XC)
-  * PMODB[5] <-> I2C clock (SCL)
-  * PMODB[6] <-> I2C data (SDA)
-
-If using the OV7670 adapter PCB from 6.205, most of these connections are already handled. Instead of connecting a Seeeduino microcontroller, use two jumper cables: one from jb[5] to the position for the Seeed's D5 (SCL) pin, and the other from jb[6] to the position for the Seeed's D4 (SDA) pin.
-
-(coming soon: a dedicated PCB to map two PMOD connectors to the proper camera breakout pins)
-
+XDC files are intended for the **Camera Board v2**, which uses the standard PMODA and the extra center JAB pins for a 2x9 connection.
 
 ## Usage
 ### User-Defined Switches

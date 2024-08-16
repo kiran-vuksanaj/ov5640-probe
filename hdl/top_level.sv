@@ -1,6 +1,15 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
+`ifndef CHANNEL_UPDATE
+ `define CHANNEL_UPDATE
+typedef struct packed {
+   logic [26:0] addr;
+   logic [26:0] stream_length;
+   logic 	wen;
+} channel_update;
+`endif
+
 module top_level
   (
    input wire 	       clk_100mhz,
@@ -250,6 +259,8 @@ module top_level
    // nothing else can be done since this is just coming at the rate of the camera
    logic 	phrase_axis_valid;
    logic 	phrase_axis_ready;
+
+   logic [127:0] cam_phrase_data;
    logic [127:0] phrase_axis_data;
 
    logic 	 newframe_cc;
@@ -268,10 +279,12 @@ module top_level
       .newframe_in(newframe_cc),
       .valid_out(phrase_axis_valid),
       .ready_out(phrase_axis_ready),
-      .data_out(phrase_axis_data),
+      .data_out(cam_phrase_data),
       .tuser_out(phrase_axis_tuser)
       );
 
+   channel_update write_addr_cmd = {27'b0, 1280*720>>3,1'b1};
+   assign phrase_axis_data = phrase_axis_tuser ? write_addr_cmd : cam_phrase_data;
 
    // ======================= CHAPTER : SEVEN SEGMENT PROBE ======================
    
@@ -428,10 +441,47 @@ module top_level
    logic 	 read_axis_tuser;
 
    logic [2:0] 	 state;
+
+   logic [127:0] tm_write_axis_data[1:0];
+   logic 	 tm_write_axis_tuser[1:0];
+   logic 	 tm_write_axis_valid[1:0];
+   logic 	 tm_write_axis_smallpile[1:0];
+   logic 	 tm_write_axis_ready[1:0];
+
+   logic [127:0] tm_read_axis_data[1:0];
+   logic 	 tm_read_axis_tuser[1:0];
+   logic 	 tm_read_axis_af[1:0];
+   logic 	 tm_read_axis_ready[1:0];
+   logic 	 tm_read_axis_valid[1:0];
    
-   traffic_generator tg
+
+   // TODO: finish incorporating traffic_merger to replace traffic_generator
+   // CHANNEL 0: write camera data, read nothing ever
+   assign tm_write_axis_data[0] = write_axis_phrase;
+   assign tm_write_axis_tuser[0] = write_axis_tuser;
+   assign tm_write_axis_valid[0] = write_axis_valid;
+   assign tm_write_axis_smallpile[0] = small_pile;
+   assign write_axis_ready = tm_write_axis_ready[0];
+
+   assign tm_read_axis_ready[0] = 1'b0;
+   
+   // CHANNEL 1: read hdmi data, write nothing ever
+   channel_update read_cmd = {26'b0, (1280*720 >> 3), 1'b0};
+   assign tm_write_axis_data[1] = read_cmd;
+   assign tm_write_axis_tuser[1] = 1'b1;
+   assign tm_write_axis_valid[1] = 1'b1;
+   assign tm_write_axis_smallpile[1] = 1'b0;
+
+   assign read_axis_data = tm_read_axis_data[1];
+   assign tm_read_axis_ready[1] = read_axis_ready;
+   assign read_axis_tuser = tm_read_axis_tuser[1];
+   assign tm_read_axis_af[1] = read_axis_af;
+   assign read_axis_valid = tm_read_axis_valid[1];
+   
+   traffic_merger #(.CHANNEL_COUNT(2)) tg
      (.clk_in(ui_clk),
       .rst_in(sys_rst_ui),
+      
       .app_addr(app_addr),
       .app_cmd(app_cmd),
       .app_en(app_en),
@@ -450,19 +500,55 @@ module top_level
       .app_ref_ack(app_ref_ack),
       .app_zq_ack(app_zq_ack),
       .init_calib_complete(init_calib_complete),
-      .write_axis_data(write_axis_phrase),
-      .write_axis_valid(write_axis_valid),
-      .write_axis_ready(write_axis_ready),
-      .write_axis_smallpile(small_pile),
-      .write_axis_tuser(write_axis_tuser),
-      .read_axis_data(read_axis_data),
-      .read_axis_valid(read_axis_valid),
-      .read_axis_af(read_axis_af),
-      .read_axis_ready(read_axis_ready),
-      .read_axis_tuser(read_axis_tuser),
-      .state_out(state),
-      .trigger_btn_sync(trigger_btn_ui)
-      );
+
+      .write_axis_data(tm_write_axis_data),
+      .write_axis_tuser(tm_write_axis_tuser),
+      .write_axis_valid(tm_write_axis_valid),
+      .write_axis_smallpile(tm_write_axis_smallpile),
+      .write_axis_ready(tm_write_axis_ready),
+
+      .read_axis_data(tm_read_axis_data),
+      .read_axis_tuser(tm_read_axis_tuser),
+      .read_axis_valid(tm_read_axis_valid),
+      .read_axis_af(tm_read_axis_af),
+      .read_axis_ready(tm_read_axis_ready));
+
+      
+
+   // traffic_generator tg
+   //   (.clk_in(ui_clk),
+   //    .rst_in(sys_rst_ui),
+   //    .app_addr(app_addr),
+   //    .app_cmd(app_cmd),
+   //    .app_en(app_en),
+   //    .app_wdf_data(app_wdf_data),
+   //    .app_wdf_end(app_wdf_end),
+   //    .app_wdf_wren(app_wdf_wren),
+   //    .app_wdf_mask(app_wdf_mask),
+   //    .app_rd_data(app_rd_data),
+   //    .app_rd_data_valid(app_rd_data_valid),
+   //    .app_rdy(app_rdy),
+   //    .app_wdf_rdy(app_wdf_rdy),
+   //    .app_sr_req(app_sr_req),
+   //    .app_ref_req(app_ref_req),
+   //    .app_zq_req(app_zq_req),
+   //    .app_sr_active(app_sr_active),
+   //    .app_ref_ack(app_ref_ack),
+   //    .app_zq_ack(app_zq_ack),
+   //    .init_calib_complete(init_calib_complete),
+   //    .write_axis_data(write_axis_phrase),
+   //    .write_axis_valid(write_axis_valid),
+   //    .write_axis_ready(write_axis_ready),
+   //    .write_axis_smallpile(small_pile),
+   //    .write_axis_tuser(write_axis_tuser),
+   //    .read_axis_data(read_axis_data),
+   //    .read_axis_valid(read_axis_valid),
+   //    .read_axis_af(read_axis_af),
+   //    .read_axis_ready(read_axis_ready),
+   //    .read_axis_tuser(read_axis_tuser),
+   //    .state_out(state),
+   //    .trigger_btn_sync(trigger_btn_ui)
+   //    );
 
 
    logic 	 hdmi_axis_valid;
@@ -514,8 +600,8 @@ module top_level
    logic [8:0] 	registers_addr;
    logic [3:0] 	ii_state;
 
-   assign led[15:3] = {state[1:0], // 15:14
-		       ii_state, // 13:10
+   assign led[15:3] = {1'b1, 1'b1, // 15:14
+		       1'b1, trigger_btn_ui, 1'b1, read_axis_tuser, // 13:10
 		       registers_addr==0, registers_dout==0, // 9:8
 		       cr_init_valid, cr_init_ready, registers_dout==24'b0, // 7:5
 		       busy, bus_active // 4:3
@@ -674,30 +760,30 @@ module top_level
 
    logic [23:0] mram_dout;
    logic [8:0] 	mram_addr;
+   // manta manta_inst 
+   //   (
+   //    .clk(clk_ui),
+
+   //    .rx(uart_rxd),
+   //    .tx(uart_txd),
+    
+   //    .tg_state(tg_state), 
+   //    .app_rdy(app_rdy), 
+   //    .app_en(app_en), 
+   //    .app_cmd(app_cmd), 
+   //    .app_addr(app_addr), 
+   //    .app_wdf_rdy(app_wdf_rdy), 
+   //    .app_wdf_wren(app_wdf_wren), 
+   //    .app_wdf_data_slice(app_wdf_data_slice), 
+   //    .app_rd_data_valid(app_rd_data_valid), 
+   //    .app_rd_data_slice(app_rd_data_slice), 
+   //    .app_rd_data_end(app_rd_data_end), 
+   //    .write_axis_smallpile(write_axis_smallpile), 
+   //    .read_axis_af(read_axis_af), 
+   //    .trigger_btn(trigger_btn), 
+   //    .write_axis_tuser(write_axis_tuser), 
+   //    .read_axis_tuser(read_axis_tuser));
    
-   manta manta_inst 
-     (
-      .clk(clk_camera),
-
-      .rx(uart_rxd),
-      .tx(uart_txd),
-
-      // .ii_state(ii_state), 
-      // .cr_init_valid(cr_init_valid), 
-      // .cr_init_ready(cr_init_ready), 
-      // .reg_bram_addr(bram_addr), 
-      // .reg_bram_dout(bram_dout), 
-      // .busy(busy), 
-      // .bus_active(bus_active),
-      // .sda(pmodb_sda),
-      // .scl(pmodb_scl),
-      
-      .register_sequence_clk(clk_camera), 
-      .register_sequence_addr(mram_addr), 
-      .register_sequence_din(24'b0), 
-      .register_sequence_dout(mram_dout), 
-      .register_sequence_we(1'b0));
-
    logic [23:0] bram_dout;
    logic [7:0] 	bram_addr;
    

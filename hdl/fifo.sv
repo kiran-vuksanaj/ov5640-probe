@@ -22,6 +22,7 @@ module build_wr_data
    logic [2:0] 		 offset;
    logic 		 offset_rollover;
    logic 		 phrase_taken;
+   logic 		 tuser_hold;
       
    assign data_out = {words[0],
 		      words[1],
@@ -42,19 +43,21 @@ module build_wr_data
 
    assign ready_in = phrase_taken;
    assign accept_in = ready_in && valid_in;
-   assign valid_out = (offset_rollover) || ~phrase_taken;
+   assign valid_out = (offset_rollover) || ~phrase_taken || (accept_in && newframe_in);
+   assign tuser_out = (accept_in && newframe_in) || tuser_hold;
    
    always_ff @(posedge clk_in) begin
       if (rst_in) begin
 	 phrase_taken <= 1'b1;
-	 tuser_out <= 1'b0;
+	 tuser_hold <= 1'b0;
       end else begin
 	 if (accept_in) begin
 	    // write data to proper section of phrasedata
 	    words[offset] <= data_in;
-	    tuser_out <= (offset == 0) ? newframe_in : (newframe_in || tuser_out);
+	    tuser_hold <= newframe_in;
+	    // tuser_out <= (offset == 0) ? newframe_in : (newframe_in || tuser_out);
 	 end
-	 if (offset == 7 || ~phrase_taken) begin
+	 if (offset == 7 || ~phrase_taken || newframe_in) begin
 	    phrase_taken <= ready_out;
 	 end
       end

@@ -55,11 +55,14 @@ module build_data_tb;
 
       newframe_in = 1;
       valid_in = 1;
+      ready_out = 0;
       data_in = 16'hABCD;
       #10;
       valid_in = 0;
       newframe_in = 0;
       #20;
+      ready_out = 1;
+      #10;
 
       valid_in = 1;
       data_in = 16'hDCBA;

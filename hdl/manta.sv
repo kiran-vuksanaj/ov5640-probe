@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns/1ps
 /*
-This module was generated with Manta v0.0.5 on 01 Feb 2024 at 14:35:55 by kiranv
+This module was generated with Manta v0.0.5 on 20 Jun 2024 at 09:18:02 by kiranv
 
 If this breaks or if you've got spicy formal verification memes, contact fischerm [at] mit.edu
 
@@ -16,11 +16,22 @@ manta manta_inst (
     .rx(rx),
     .tx(tx),
     
-    .register_sequence_clk(register_sequence_clk), 
-    .register_sequence_addr(register_sequence_addr), 
-    .register_sequence_din(register_sequence_din), 
-    .register_sequence_dout(register_sequence_dout), 
-    .register_sequence_we(register_sequence_we));
+    .tg_state(tg_state), 
+    .app_rdy(app_rdy), 
+    .app_en(app_en), 
+    .app_cmd(app_cmd), 
+    .app_addr(app_addr), 
+    .app_wdf_rdy(app_wdf_rdy), 
+    .app_wdf_wren(app_wdf_wren), 
+    .app_wdf_data_slice(app_wdf_data_slice), 
+    .app_rd_data_valid(app_rd_data_valid), 
+    .app_rd_data_slice(app_rd_data_slice), 
+    .app_rd_data_end(app_rd_data_end), 
+    .write_axis_smallpile(write_axis_smallpile), 
+    .read_axis_af(read_axis_af), 
+    .trigger_btn(trigger_btn), 
+    .write_axis_tuser(write_axis_tuser), 
+    .read_axis_tuser(read_axis_tuser));
 
 */
 
@@ -30,14 +41,25 @@ module manta (
     input wire rx,
     output reg tx,
     
-    input wire register_sequence_clk,
-    input wire [7:0] register_sequence_addr,
-    input wire [23:0] register_sequence_din,
-    output reg [23:0] register_sequence_dout,
-    input wire register_sequence_we);
+    input wire [2:0] tg_state,
+    input wire app_rdy,
+    input wire app_en,
+    input wire [2:0] app_cmd,
+    input wire [20:0] app_addr,
+    input wire app_wdf_rdy,
+    input wire app_wdf_wren,
+    input wire [15:0] app_wdf_data_slice,
+    input wire app_rd_data_valid,
+    input wire [15:0] app_rd_data_slice,
+    input wire app_rd_data_end,
+    input wire write_axis_smallpile,
+    input wire read_axis_af,
+    input wire trigger_btn,
+    input wire write_axis_tuser,
+    input wire read_axis_tuser);
 
 
-    uart_rx #(.CLOCKS_PER_BAUD(66)) urx (
+    uart_rx #(.CLOCKS_PER_BAUD(27)) urx (
         .clk(clk),
         .rx(rx),
     
@@ -53,48 +75,56 @@ module manta (
         .data_i(urx_brx_data),
         .valid_i(urx_brx_valid),
     
-        .addr_o(brx_register_sequence_addr),
-        .data_o(brx_register_sequence_data),
-        .rw_o(brx_register_sequence_rw),
-        .valid_o(brx_register_sequence_valid));
-    reg [15:0] brx_register_sequence_addr;
-    reg [15:0] brx_register_sequence_data;
-    reg brx_register_sequence_rw;
-    reg brx_register_sequence_valid;
+        .addr_o(brx_cam_logic_analyzer_addr),
+        .data_o(brx_cam_logic_analyzer_data),
+        .rw_o(brx_cam_logic_analyzer_rw),
+        .valid_o(brx_cam_logic_analyzer_valid));
+    reg [15:0] brx_cam_logic_analyzer_addr;
+    reg [15:0] brx_cam_logic_analyzer_data;
+    reg brx_cam_logic_analyzer_rw;
+    reg brx_cam_logic_analyzer_valid;
     
 
-    block_memory #(
-        .WIDTH(24),
-        .DEPTH(256)
-    ) register_sequence (
+    logic_analyzer cam_logic_analyzer (
         .clk(clk),
     
-        .addr_i(brx_register_sequence_addr),
-        .data_i(brx_register_sequence_data),
-        .rw_i(brx_register_sequence_rw),
-        .valid_i(brx_register_sequence_valid),
+        .addr_i(brx_cam_logic_analyzer_addr),
+        .data_i(brx_cam_logic_analyzer_data),
+        .rw_i(brx_cam_logic_analyzer_rw),
+        .valid_i(brx_cam_logic_analyzer_valid),
     
-        .user_clk(register_sequence_clk),
-        .user_addr(register_sequence_addr),
-        .user_din(register_sequence_din),
-        .user_dout(register_sequence_dout),
-        .user_we(register_sequence_we),
+        .tg_state(tg_state),
+        .app_rdy(app_rdy),
+        .app_en(app_en),
+        .app_cmd(app_cmd),
+        .app_addr(app_addr),
+        .app_wdf_rdy(app_wdf_rdy),
+        .app_wdf_wren(app_wdf_wren),
+        .app_wdf_data_slice(app_wdf_data_slice),
+        .app_rd_data_valid(app_rd_data_valid),
+        .app_rd_data_slice(app_rd_data_slice),
+        .app_rd_data_end(app_rd_data_end),
+        .write_axis_smallpile(write_axis_smallpile),
+        .read_axis_af(read_axis_af),
+        .trigger_btn(trigger_btn),
+        .write_axis_tuser(write_axis_tuser),
+        .read_axis_tuser(read_axis_tuser),
     
         .addr_o(),
-        .data_o(register_sequence_btx_data),
-        .rw_o(register_sequence_btx_rw),
-        .valid_o(register_sequence_btx_valid));
+        .data_o(cam_logic_analyzer_btx_data),
+        .rw_o(cam_logic_analyzer_btx_rw),
+        .valid_o(cam_logic_analyzer_btx_valid));
 
     
-    reg [15:0] register_sequence_btx_data;
-    reg register_sequence_btx_rw;
-    reg register_sequence_btx_valid;
+    reg [15:0] cam_logic_analyzer_btx_data;
+    reg cam_logic_analyzer_btx_rw;
+    reg cam_logic_analyzer_btx_valid;
     bridge_tx btx (
         .clk(clk),
     
-        .data_i(register_sequence_btx_data),
-        .rw_i(register_sequence_btx_rw),
-        .valid_i(register_sequence_btx_valid),
+        .data_i(cam_logic_analyzer_btx_data),
+        .rw_i(cam_logic_analyzer_btx_rw),
+        .valid_i(cam_logic_analyzer_btx_valid),
     
         .data_o(btx_utx_data),
         .start_o(btx_utx_start),
@@ -104,7 +134,7 @@ module manta (
     reg btx_utx_start;
     reg utx_btx_done;
     
-    uart_tx #(.CLOCKS_PER_BAUD(66)) utx (
+    uart_tx #(.CLOCKS_PER_BAUD(27)) utx (
         .clk(clk),
     
         .data_i(btx_utx_data),
@@ -319,6 +349,331 @@ module bridge_rx (
 `endif // FORMAL
 endmodule
 
+module logic_analyzer (
+    input wire clk,
+
+    // probes
+    input wire [2:0] tg_state,
+    input wire app_rdy,
+    input wire app_en,
+    input wire [2:0] app_cmd,
+    input wire [20:0] app_addr,
+    input wire app_wdf_rdy,
+    input wire app_wdf_wren,
+    input wire [15:0] app_wdf_data_slice,
+    input wire app_rd_data_valid,
+    input wire [15:0] app_rd_data_slice,
+    input wire app_rd_data_end,
+    input wire write_axis_smallpile,
+    input wire read_axis_af,
+    input wire trigger_btn,
+    input wire write_axis_tuser,
+    input wire read_axis_tuser,
+
+    // input port
+    input wire [15:0] addr_i,
+    input wire [15:0] data_i,
+    input wire rw_i,
+    input wire valid_i,
+
+    // output port
+    output reg [15:0] addr_o,
+    output reg [15:0] data_o,
+    output reg rw_o,
+    output reg valid_o
+    );
+    localparam SAMPLE_DEPTH = 8192;
+    localparam ADDR_WIDTH = $clog2(SAMPLE_DEPTH);
+
+    reg [3:0] state;
+    reg [15:0] trigger_loc;
+    reg [1:0] trigger_mode;
+    reg request_start;
+    reg request_stop;
+    reg [ADDR_WIDTH-1:0] read_pointer;
+    reg [ADDR_WIDTH-1:0] write_pointer;
+
+    reg trig;
+
+    reg [ADDR_WIDTH-1:0] bram_addr;
+    reg bram_we;
+
+    localparam TOTAL_PROBE_WIDTH = 70;
+    reg [TOTAL_PROBE_WIDTH-1:0] probes_concat;
+    assign probes_concat = {read_axis_tuser, write_axis_tuser, trigger_btn, read_axis_af, write_axis_smallpile, app_rd_data_end, app_rd_data_slice, app_rd_data_valid, app_wdf_data_slice, app_wdf_wren, app_wdf_rdy, app_addr, app_cmd, app_en, app_rdy, tg_state};
+
+    logic_analyzer_controller #(.SAMPLE_DEPTH(SAMPLE_DEPTH)) la_controller (
+        .clk(clk),
+
+        // from register file
+        .state(state),
+        .trigger_loc(trigger_loc),
+        .trigger_mode(trigger_mode),
+        .request_start(request_start),
+        .request_stop(request_stop),
+        .read_pointer(read_pointer),
+        .write_pointer(write_pointer),
+
+        // from trigger block
+        .trig(trig),
+
+        // from block memory user port
+        .bram_addr(bram_addr),
+        .bram_we(bram_we)
+    );
+
+    logic_analyzer_fsm_registers #(
+        .BASE_ADDR(0),
+        .SAMPLE_DEPTH(SAMPLE_DEPTH)
+        ) fsm_registers (
+        .clk(clk),
+
+        .addr_i(addr_i),
+        .data_i(data_i),
+        .rw_i(rw_i),
+        .valid_i(valid_i),
+
+        .addr_o(fsm_reg_trig_blk_addr),
+        .data_o(fsm_reg_trig_blk_data),
+        .rw_o(fsm_reg_trig_blk_rw),
+        .valid_o(fsm_reg_trig_blk_valid),
+
+        .state(state),
+        .trigger_loc(trigger_loc),
+        .trigger_mode(trigger_mode),
+        .request_start(request_start),
+        .request_stop(request_stop),
+        .read_pointer(read_pointer),
+        .write_pointer(write_pointer));
+
+    reg [15:0] fsm_reg_trig_blk_addr;
+    reg [15:0] fsm_reg_trig_blk_data;
+    reg fsm_reg_trig_blk_rw;
+    reg fsm_reg_trig_blk_valid;
+
+    // trigger block
+    trigger_block #(.BASE_ADDR(7)) trig_blk (
+        .clk(clk),
+
+        .tg_state(tg_state),
+        .app_rdy(app_rdy),
+        .app_en(app_en),
+        .app_cmd(app_cmd),
+        .app_addr(app_addr),
+        .app_wdf_rdy(app_wdf_rdy),
+        .app_wdf_wren(app_wdf_wren),
+        .app_wdf_data_slice(app_wdf_data_slice),
+        .app_rd_data_valid(app_rd_data_valid),
+        .app_rd_data_slice(app_rd_data_slice),
+        .app_rd_data_end(app_rd_data_end),
+        .write_axis_smallpile(write_axis_smallpile),
+        .read_axis_af(read_axis_af),
+        .trigger_btn(trigger_btn),
+        .write_axis_tuser(write_axis_tuser),
+        .read_axis_tuser(read_axis_tuser),
+
+        .trig(trig),
+
+        .addr_i(fsm_reg_trig_blk_addr),
+        .data_i(fsm_reg_trig_blk_data),
+        .rw_i(fsm_reg_trig_blk_rw),
+        .valid_i(fsm_reg_trig_blk_valid),
+
+        .addr_o(trig_blk_block_mem_addr),
+        .data_o(trig_blk_block_mem_data),
+        .rw_o(trig_blk_block_mem_rw),
+        .valid_o(trig_blk_block_mem_valid));
+
+    reg [15:0] trig_blk_block_mem_addr;
+    reg [15:0] trig_blk_block_mem_data;
+    reg trig_blk_block_mem_rw;
+    reg trig_blk_block_mem_valid;
+
+    // sample memory
+    block_memory #(
+        .BASE_ADDR(39),
+        .WIDTH(TOTAL_PROBE_WIDTH),
+        .DEPTH(SAMPLE_DEPTH)
+        ) block_mem (
+        .clk(clk),
+
+        // input port
+        .addr_i(trig_blk_block_mem_addr),
+        .data_i(trig_blk_block_mem_data),
+        .rw_i(trig_blk_block_mem_rw),
+        .valid_i(trig_blk_block_mem_valid),
+
+        // output port
+        .addr_o(addr_o),
+        .data_o(data_o),
+        .rw_o(rw_o),
+        .valid_o(valid_o),
+
+        // BRAM itself
+        .user_clk(clk),
+        .user_addr(bram_addr),
+        .user_din(probes_concat),
+        .user_dout(),
+        .user_we(bram_we));
+endmodule
+module logic_analyzer_controller (
+    input wire clk,
+
+    // from register file
+    output reg [3:0] state,
+    input wire [15:0] trigger_loc,
+    input wire [1:0] trigger_mode,
+    input wire request_start,
+    input wire request_stop,
+    output reg [ADDR_WIDTH-1:0] read_pointer,
+    output reg [ADDR_WIDTH-1:0] write_pointer,
+
+    // from trigger block
+    input wire trig,
+
+    // block memory user port
+    output reg [ADDR_WIDTH-1:0] bram_addr,
+    output reg bram_we
+    );
+
+    assign bram_addr = write_pointer;
+
+    parameter SAMPLE_DEPTH= 0;
+    localparam ADDR_WIDTH = $clog2(SAMPLE_DEPTH);
+
+    /* ----- FIFO ----- */
+    initial read_pointer = 0;
+    initial write_pointer = 0;
+
+    /* ----- FSM ----- */
+    localparam IDLE = 0;
+    localparam MOVE_TO_POSITION = 1;
+    localparam IN_POSITION = 2;
+    localparam CAPTURING = 3;
+    localparam CAPTURED = 4;
+
+    initial state = IDLE;
+
+    // rising edge detection for start/stop requests
+    reg prev_request_start;
+    always @(posedge clk) prev_request_start <= request_start;
+
+    reg prev_request_stop;
+    always @(posedge clk) prev_request_stop <= request_stop;
+
+    always @(posedge clk) begin
+        // don't do anything to the FIFO unless told to
+
+        if(state == IDLE) begin
+            write_pointer <= 0;
+            read_pointer <= 0;
+            bram_we <= 0;
+
+            if(request_start && ~prev_request_start) begin
+                state <= MOVE_TO_POSITION;
+            end
+        end
+
+        else if(state == MOVE_TO_POSITION) begin
+            write_pointer <= write_pointer + 1;
+            bram_we <= 1;
+
+            if(write_pointer == trigger_loc) begin
+                if(trig) state <= CAPTURING;
+                else state <= IN_POSITION;
+            end
+        end
+
+        else if(state == IN_POSITION) begin
+            write_pointer <= (write_pointer + 1) % SAMPLE_DEPTH;
+            read_pointer <= (read_pointer + 1) % SAMPLE_DEPTH;
+            bram_we <= 1;
+            if(trig) state <= CAPTURING;
+        end
+
+        else if(state == CAPTURING) begin
+            if(write_pointer == read_pointer) begin
+                bram_we <= 0;
+                state <= CAPTURED;
+            end
+
+            else write_pointer <= (write_pointer + 1) % SAMPLE_DEPTH;
+        end
+
+        if(request_stop && ~prev_request_stop) state <= IDLE;
+    end
+endmodule
+module logic_analyzer_fsm_registers(
+    input wire clk,
+
+    // input port
+    input wire [15:0] addr_i,
+    input wire [15:0] data_i,
+    input wire rw_i,
+    input wire valid_i,
+
+    // output port
+    output reg [15:0] addr_o,
+    output reg [15:0] data_o,
+    output reg rw_o,
+    output reg valid_o,
+
+    // registers
+    input wire [3:0] state,
+    output reg [15:0] trigger_loc,
+    output reg [1:0] trigger_mode,
+    output reg request_start,
+    output reg request_stop,
+    input wire [ADDR_WIDTH-1:0] read_pointer,
+    input wire [ADDR_WIDTH-1:0] write_pointer
+    );
+
+    initial trigger_loc = 0;
+    initial trigger_mode = 0;
+    initial request_start = 0;
+    initial request_stop = 0;
+
+    parameter BASE_ADDR = 0;
+    localparam MAX_ADDR = BASE_ADDR + 5;
+    parameter SAMPLE_DEPTH = 0;
+    parameter ADDR_WIDTH = $clog2(SAMPLE_DEPTH);
+
+    always @(posedge clk) begin
+        addr_o <= addr_i;
+        data_o <= data_i;
+        rw_o <= rw_i;
+        valid_o <= valid_i;
+
+        // check if address is valid
+        if( (valid_i) && (addr_i >= BASE_ADDR) && (addr_i <= MAX_ADDR)) begin
+
+            // reads
+            if(!rw_i) begin
+                case (addr_i)
+                    BASE_ADDR + 0: data_o <= state;
+                    BASE_ADDR + 1: data_o <= trigger_mode;
+                    BASE_ADDR + 2: data_o <= trigger_loc;
+                    BASE_ADDR + 3: data_o <= request_start;
+                    BASE_ADDR + 4: data_o <= request_stop;
+                    BASE_ADDR + 5: data_o <= read_pointer;
+                    BASE_ADDR + 6: data_o <= write_pointer;
+                endcase
+            end
+
+            // writes
+            else begin
+                case (addr_i)
+                    BASE_ADDR + 1: trigger_mode <= data_i;
+                    BASE_ADDR + 2: trigger_loc <= data_i;
+                    BASE_ADDR + 3: request_start <= data_i;
+                    BASE_ADDR + 4: request_stop <= data_i;
+                endcase
+            end
+        end
+    end
+
+
+endmodule
 module block_memory (
     input wire clk,
 
@@ -487,6 +842,355 @@ module dual_port_bram #(
 
     assign douta = douta_reg;
     assign doutb = doutb_reg;
+endmodule
+module trigger_block (
+    input wire clk,
+
+    // probes
+    input wire [2:0] tg_state,
+    input wire app_rdy,
+    input wire app_en,
+    input wire [2:0] app_cmd,
+    input wire [20:0] app_addr,
+    input wire app_wdf_rdy,
+    input wire app_wdf_wren,
+    input wire [15:0] app_wdf_data_slice,
+    input wire app_rd_data_valid,
+    input wire [15:0] app_rd_data_slice,
+    input wire app_rd_data_end,
+    input wire write_axis_smallpile,
+    input wire read_axis_af,
+    input wire trigger_btn,
+    input wire write_axis_tuser,
+    input wire read_axis_tuser,
+
+    // trigger
+    output reg trig,
+
+    // input port
+    input wire [15:0] addr_i,
+    input wire [15:0] data_i,
+    input wire rw_i,
+    input wire valid_i,
+
+    // output port
+    output reg [15:0] addr_o,
+    output reg [15:0] data_o,
+    output reg rw_o,
+    output reg valid_o);
+
+    parameter BASE_ADDR = 0;
+    localparam MAX_ADDR = 39;
+
+    // trigger configuration registers
+    // - each probe gets an operation and a compare register
+    // - at the end we OR them all together. along with any custom probes the user specs
+
+    reg [3:0] tg_state_op = 0;
+    reg [2:0] tg_state_arg = 0;
+    reg tg_state_trig;
+    
+    trigger #(.INPUT_WIDTH(3)) tg_state_trigger (
+        .clk(clk),
+    
+        .probe(tg_state),
+        .op(tg_state_op),
+        .arg(tg_state_arg),
+        .trig(tg_state_trig));
+    reg [3:0] app_rdy_op = 0;
+    reg app_rdy_arg = 0;
+    reg app_rdy_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_rdy_trigger (
+        .clk(clk),
+    
+        .probe(app_rdy),
+        .op(app_rdy_op),
+        .arg(app_rdy_arg),
+        .trig(app_rdy_trig));
+    reg [3:0] app_en_op = 0;
+    reg app_en_arg = 0;
+    reg app_en_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_en_trigger (
+        .clk(clk),
+    
+        .probe(app_en),
+        .op(app_en_op),
+        .arg(app_en_arg),
+        .trig(app_en_trig));
+    reg [3:0] app_cmd_op = 0;
+    reg [2:0] app_cmd_arg = 0;
+    reg app_cmd_trig;
+    
+    trigger #(.INPUT_WIDTH(3)) app_cmd_trigger (
+        .clk(clk),
+    
+        .probe(app_cmd),
+        .op(app_cmd_op),
+        .arg(app_cmd_arg),
+        .trig(app_cmd_trig));
+    reg [3:0] app_addr_op = 0;
+    reg [20:0] app_addr_arg = 0;
+    reg app_addr_trig;
+    
+    trigger #(.INPUT_WIDTH(21)) app_addr_trigger (
+        .clk(clk),
+    
+        .probe(app_addr),
+        .op(app_addr_op),
+        .arg(app_addr_arg),
+        .trig(app_addr_trig));
+    reg [3:0] app_wdf_rdy_op = 0;
+    reg app_wdf_rdy_arg = 0;
+    reg app_wdf_rdy_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_wdf_rdy_trigger (
+        .clk(clk),
+    
+        .probe(app_wdf_rdy),
+        .op(app_wdf_rdy_op),
+        .arg(app_wdf_rdy_arg),
+        .trig(app_wdf_rdy_trig));
+    reg [3:0] app_wdf_wren_op = 0;
+    reg app_wdf_wren_arg = 0;
+    reg app_wdf_wren_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_wdf_wren_trigger (
+        .clk(clk),
+    
+        .probe(app_wdf_wren),
+        .op(app_wdf_wren_op),
+        .arg(app_wdf_wren_arg),
+        .trig(app_wdf_wren_trig));
+    reg [3:0] app_wdf_data_slice_op = 0;
+    reg [15:0] app_wdf_data_slice_arg = 0;
+    reg app_wdf_data_slice_trig;
+    
+    trigger #(.INPUT_WIDTH(16)) app_wdf_data_slice_trigger (
+        .clk(clk),
+    
+        .probe(app_wdf_data_slice),
+        .op(app_wdf_data_slice_op),
+        .arg(app_wdf_data_slice_arg),
+        .trig(app_wdf_data_slice_trig));
+    reg [3:0] app_rd_data_valid_op = 0;
+    reg app_rd_data_valid_arg = 0;
+    reg app_rd_data_valid_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_rd_data_valid_trigger (
+        .clk(clk),
+    
+        .probe(app_rd_data_valid),
+        .op(app_rd_data_valid_op),
+        .arg(app_rd_data_valid_arg),
+        .trig(app_rd_data_valid_trig));
+    reg [3:0] app_rd_data_slice_op = 0;
+    reg [15:0] app_rd_data_slice_arg = 0;
+    reg app_rd_data_slice_trig;
+    
+    trigger #(.INPUT_WIDTH(16)) app_rd_data_slice_trigger (
+        .clk(clk),
+    
+        .probe(app_rd_data_slice),
+        .op(app_rd_data_slice_op),
+        .arg(app_rd_data_slice_arg),
+        .trig(app_rd_data_slice_trig));
+    reg [3:0] app_rd_data_end_op = 0;
+    reg app_rd_data_end_arg = 0;
+    reg app_rd_data_end_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) app_rd_data_end_trigger (
+        .clk(clk),
+    
+        .probe(app_rd_data_end),
+        .op(app_rd_data_end_op),
+        .arg(app_rd_data_end_arg),
+        .trig(app_rd_data_end_trig));
+    reg [3:0] write_axis_smallpile_op = 0;
+    reg write_axis_smallpile_arg = 0;
+    reg write_axis_smallpile_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) write_axis_smallpile_trigger (
+        .clk(clk),
+    
+        .probe(write_axis_smallpile),
+        .op(write_axis_smallpile_op),
+        .arg(write_axis_smallpile_arg),
+        .trig(write_axis_smallpile_trig));
+    reg [3:0] read_axis_af_op = 0;
+    reg read_axis_af_arg = 0;
+    reg read_axis_af_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) read_axis_af_trigger (
+        .clk(clk),
+    
+        .probe(read_axis_af),
+        .op(read_axis_af_op),
+        .arg(read_axis_af_arg),
+        .trig(read_axis_af_trig));
+    reg [3:0] trigger_btn_op = 0;
+    reg trigger_btn_arg = 0;
+    reg trigger_btn_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) trigger_btn_trigger (
+        .clk(clk),
+    
+        .probe(trigger_btn),
+        .op(trigger_btn_op),
+        .arg(trigger_btn_arg),
+        .trig(trigger_btn_trig));
+    reg [3:0] write_axis_tuser_op = 0;
+    reg write_axis_tuser_arg = 0;
+    reg write_axis_tuser_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) write_axis_tuser_trigger (
+        .clk(clk),
+    
+        .probe(write_axis_tuser),
+        .op(write_axis_tuser_op),
+        .arg(write_axis_tuser_arg),
+        .trig(write_axis_tuser_trig));
+    reg [3:0] read_axis_tuser_op = 0;
+    reg read_axis_tuser_arg = 0;
+    reg read_axis_tuser_trig;
+    
+    trigger #(.INPUT_WIDTH(1)) read_axis_tuser_trigger (
+        .clk(clk),
+    
+        .probe(read_axis_tuser),
+        .op(read_axis_tuser_op),
+        .arg(read_axis_tuser_arg),
+        .trig(read_axis_tuser_trig));
+
+   assign trig = tg_state_trig || app_rdy_trig || app_en_trig || app_cmd_trig || app_addr_trig || app_wdf_rdy_trig || app_wdf_wren_trig || app_wdf_data_slice_trig || app_rd_data_valid_trig || app_rd_data_slice_trig || app_rd_data_end_trig || write_axis_smallpile_trig || read_axis_af_trig || trigger_btn_trig || write_axis_tuser_trig || read_axis_tuser_trig;
+
+    // perform register operations
+    always @(posedge clk) begin
+        addr_o <= addr_i;
+        data_o <= data_i;
+        rw_o <= rw_i;
+        valid_o <= valid_i;
+
+        if( (addr_i >= BASE_ADDR) && (addr_i <= BASE_ADDR + MAX_ADDR) ) begin
+
+            // reads
+            if(valid_i && !rw_i) begin
+                case (addr_i)
+                    BASE_ADDR + 0: data_o <= tg_state_op;
+                    BASE_ADDR + 1: data_o <= tg_state_arg;
+                    BASE_ADDR + 2: data_o <= app_rdy_op;
+                    BASE_ADDR + 3: data_o <= app_rdy_arg;
+                    BASE_ADDR + 4: data_o <= app_en_op;
+                    BASE_ADDR + 5: data_o <= app_en_arg;
+                    BASE_ADDR + 6: data_o <= app_cmd_op;
+                    BASE_ADDR + 7: data_o <= app_cmd_arg;
+                    BASE_ADDR + 8: data_o <= app_addr_op;
+                    BASE_ADDR + 9: data_o <= app_addr_arg;
+                    BASE_ADDR + 10: data_o <= app_wdf_rdy_op;
+                    BASE_ADDR + 11: data_o <= app_wdf_rdy_arg;
+                    BASE_ADDR + 12: data_o <= app_wdf_wren_op;
+                    BASE_ADDR + 13: data_o <= app_wdf_wren_arg;
+                    BASE_ADDR + 14: data_o <= app_wdf_data_slice_op;
+                    BASE_ADDR + 15: data_o <= app_wdf_data_slice_arg;
+                    BASE_ADDR + 16: data_o <= app_rd_data_valid_op;
+                    BASE_ADDR + 17: data_o <= app_rd_data_valid_arg;
+                    BASE_ADDR + 18: data_o <= app_rd_data_slice_op;
+                    BASE_ADDR + 19: data_o <= app_rd_data_slice_arg;
+                    BASE_ADDR + 20: data_o <= app_rd_data_end_op;
+                    BASE_ADDR + 21: data_o <= app_rd_data_end_arg;
+                    BASE_ADDR + 22: data_o <= write_axis_smallpile_op;
+                    BASE_ADDR + 23: data_o <= write_axis_smallpile_arg;
+                    BASE_ADDR + 24: data_o <= read_axis_af_op;
+                    BASE_ADDR + 25: data_o <= read_axis_af_arg;
+                    BASE_ADDR + 26: data_o <= trigger_btn_op;
+                    BASE_ADDR + 27: data_o <= trigger_btn_arg;
+                    BASE_ADDR + 28: data_o <= write_axis_tuser_op;
+                    BASE_ADDR + 29: data_o <= write_axis_tuser_arg;
+                    BASE_ADDR + 30: data_o <= read_axis_tuser_op;
+                    BASE_ADDR + 31: data_o <= read_axis_tuser_arg;
+                endcase
+            end
+
+            // writes
+            else if(valid_i && rw_i) begin
+                case (addr_i)
+                    BASE_ADDR + 0: tg_state_op <= data_i;
+                    BASE_ADDR + 1: tg_state_arg <= data_i;
+                    BASE_ADDR + 2: app_rdy_op <= data_i;
+                    BASE_ADDR + 3: app_rdy_arg <= data_i;
+                    BASE_ADDR + 4: app_en_op <= data_i;
+                    BASE_ADDR + 5: app_en_arg <= data_i;
+                    BASE_ADDR + 6: app_cmd_op <= data_i;
+                    BASE_ADDR + 7: app_cmd_arg <= data_i;
+                    BASE_ADDR + 8: app_addr_op <= data_i;
+                    BASE_ADDR + 9: app_addr_arg <= data_i;
+                    BASE_ADDR + 10: app_wdf_rdy_op <= data_i;
+                    BASE_ADDR + 11: app_wdf_rdy_arg <= data_i;
+                    BASE_ADDR + 12: app_wdf_wren_op <= data_i;
+                    BASE_ADDR + 13: app_wdf_wren_arg <= data_i;
+                    BASE_ADDR + 14: app_wdf_data_slice_op <= data_i;
+                    BASE_ADDR + 15: app_wdf_data_slice_arg <= data_i;
+                    BASE_ADDR + 16: app_rd_data_valid_op <= data_i;
+                    BASE_ADDR + 17: app_rd_data_valid_arg <= data_i;
+                    BASE_ADDR + 18: app_rd_data_slice_op <= data_i;
+                    BASE_ADDR + 19: app_rd_data_slice_arg <= data_i;
+                    BASE_ADDR + 20: app_rd_data_end_op <= data_i;
+                    BASE_ADDR + 21: app_rd_data_end_arg <= data_i;
+                    BASE_ADDR + 22: write_axis_smallpile_op <= data_i;
+                    BASE_ADDR + 23: write_axis_smallpile_arg <= data_i;
+                    BASE_ADDR + 24: read_axis_af_op <= data_i;
+                    BASE_ADDR + 25: read_axis_af_arg <= data_i;
+                    BASE_ADDR + 26: trigger_btn_op <= data_i;
+                    BASE_ADDR + 27: trigger_btn_arg <= data_i;
+                    BASE_ADDR + 28: write_axis_tuser_op <= data_i;
+                    BASE_ADDR + 29: write_axis_tuser_arg <= data_i;
+                    BASE_ADDR + 30: read_axis_tuser_op <= data_i;
+                    BASE_ADDR + 31: read_axis_tuser_arg <= data_i;
+                endcase
+            end
+        end
+    end
+endmodule
+module trigger (
+    input wire clk,
+
+    input wire [INPUT_WIDTH-1:0] probe,
+    input wire [3:0] op,
+    input wire [INPUT_WIDTH-1:0] arg,
+
+    output reg trig);
+
+    parameter INPUT_WIDTH = 0;
+
+    localparam DISABLE = 0;
+    localparam RISING = 1;
+    localparam FALLING = 2;
+    localparam CHANGING = 3;
+    localparam GT = 4;
+    localparam LT = 5;
+    localparam GEQ = 6;
+    localparam LEQ = 7;
+    localparam EQ = 8;
+    localparam NEQ = 9;
+
+    reg [INPUT_WIDTH-1:0] probe_prev = 0;
+    always @(posedge clk) probe_prev <= probe;
+
+    always @(*) begin
+        case (op)
+            RISING :    trig = (probe > probe_prev);
+            FALLING :   trig = (probe < probe_prev);
+            CHANGING :  trig = (probe != probe_prev);
+            GT:         trig = (probe > arg);
+            LT:         trig = (probe < arg);
+            GEQ:        trig = (probe >= arg);
+            LEQ:        trig = (probe <= arg);
+            EQ:         trig = (probe == arg);
+            NEQ:        trig = (probe != arg);
+            default:    trig = 0;
+        endcase
+    end
 endmodule
 
 module bridge_tx (

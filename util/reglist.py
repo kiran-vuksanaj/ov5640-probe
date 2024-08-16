@@ -12,7 +12,7 @@ cam.colorspace = adafruit_ov5640.OV5640_COLOR_RGB
 cam.flip_y = False
 cam.flip_x = False
 
-cam.test_pattern = True
+cam.test_pattern = False
 
 # cam._write_addr_reg(0x3816,320,40)
 byte_list = [ ((regval[0]<<8) + regval[1]) for regval in cam._writes ]

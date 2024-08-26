@@ -259,6 +259,51 @@ module top_level
       .vcount_out(vcount_cc)
       );
 
+
+   // NEW SEGMENT FOR GLOW TRAILS STUFF
+   logic [23:0] camera_pixel_full;
+   assign camera_pixel_full = {
+			       pixel_cc[15:11], 3'b0,
+			       pixel_cc[10:6], 3'b0,
+			       pixel_cc[4:0], 3'b0
+			       };
+
+   
+   logic [15:0] history_pixel;
+   logic [23:0] 	   history_pixel_full;
+   assign history_pixel_full = {
+				history_pixel[15:11],3'b0,
+				history_pixel[10:6],3'b0,
+				history_pixel[4:0],3'b0
+				};
+
+   logic [23:0] 	   update_pixel_full;
+   logic [15:0] update_pixel;
+   assign update_pixel = {
+			  update_pixel_full[23:19],
+			  update_pixel_full[15:11],1'b0,
+			  update_pixel_full[7:3]
+			  };
+   
+   logic 		   data_valid_iir;
+
+   logic [7:0] 		   threshold;
+   assign threshold = sw[15:8];
+			       
+   trail_iir trail_generator
+     (.clk_in(clk_camera),
+      .rst_in(sys_rst_camera),
+      .threshold_in(threshold),
+      .mask_in(sw[3]),
+      .valid_in(valid_cc),
+      .history_in(history_pixel_full),
+      .camera_in(camera_pixel_full),
+      .update_out(update_pixel_full),
+      .valid_out(data_valid_iir)
+      );
+
+   
+
    // pass pixels into the phrase builder
    // ignore the ready signal! if its not ready, data will just be missed.
    // nothing else can be done since this is just coming at the rate of the camera
@@ -273,15 +318,19 @@ module top_level
    logic 	 ready_builder;
    
    assign newframe_cc = (hcount_cc <= 1 && vcount_cc == 0);
+   logic 	 newframe_cc_buf[1:0];
+   always_ff @(posedge clk_camera) begin
+      newframe_cc_buf <= {newframe_cc, newframe_cc_buf[0]};
+   end
    
    build_wr_data
      (.clk_in(clk_camera),
       .rst_in(sys_rst_camera),
-      .valid_in(valid_cc),
+      .valid_in(data_valid_iir),
       .ready_in(ready_builder), // discarded currently
       // .data_in(pixel_cc_filter),// temporary test value
-      .data_in(pixel_cc),
-      .newframe_in(newframe_cc),
+      .data_in(update_pixel),
+      .newframe_in(newframe_cc_buf[1]),
       .valid_out(phrase_axis_valid),
       .ready_out(phrase_axis_ready),
       .data_out(cam_phrase_data),
@@ -439,6 +488,12 @@ module top_level
    assign led[2] = init_calib_complete; // og led[1]
    // assign led[3] = cycle_counter[28]; // og led[2]
 
+   logic [127:0] history_axis_data;
+   logic 	 history_axis_valid;
+   logic 	 history_axis_af;
+   logic 	 history_axis_ready;
+   logic 	 history_axis_tuser;
+
    logic [127:0] read_axis_data;
    logic 	 read_axis_valid;
    logic 	 read_axis_af;
@@ -447,17 +502,17 @@ module top_level
 
    logic [2:0] 	 state;
 
-   logic [127:0] tm_write_axis_data[1:0];
-   logic 	 tm_write_axis_tuser[1:0];
-   logic 	 tm_write_axis_valid[1:0];
-   logic 	 tm_write_axis_smallpile[1:0];
-   logic 	 tm_write_axis_ready[1:0];
+   logic [127:0] tm_write_axis_data[2:0];
+   logic 	 tm_write_axis_tuser[2:0];
+   logic 	 tm_write_axis_valid[2:0];
+   logic 	 tm_write_axis_smallpile[2:0];
+   logic 	 tm_write_axis_ready[2:0];
 
-   logic [127:0] tm_read_axis_data[1:0];
-   logic 	 tm_read_axis_tuser[1:0];
-   logic 	 tm_read_axis_af[1:0];
-   logic 	 tm_read_axis_ready[1:0];
-   logic 	 tm_read_axis_valid[1:0];
+   logic [127:0] tm_read_axis_data[2:0];
+   logic 	 tm_read_axis_tuser[2:0];
+   logic 	 tm_read_axis_af[2:0];
+   logic 	 tm_read_axis_ready[2:0];
+   logic 	 tm_read_axis_valid[2:0];
    
 
    // TODO: finish incorporating traffic_merger to replace traffic_generator
@@ -471,7 +526,7 @@ module top_level
    assign tm_read_axis_ready[0] = 1'b0;
    
    // CHANNEL 1: read hdmi data, write nothing ever
-   channel_update read_cmd = {26'b0, (1280*720 >> 3), 1'b0};
+   channel_update read_cmd = {26'b0, 26'(1280*720 >> 3), 1'b0};
    assign tm_write_axis_data[1] = read_cmd;
    assign tm_write_axis_tuser[1] = 1'b1;
    assign tm_write_axis_valid[1] = 1'b1;
@@ -482,8 +537,21 @@ module top_level
    assign read_axis_tuser = tm_read_axis_tuser[1];
    assign tm_read_axis_af[1] = read_axis_af;
    assign read_axis_valid = tm_read_axis_valid[1];
+
    
-   traffic_merger #(.CHANNEL_COUNT(2)) tg
+   // CHANNEL 2: read iir history data, write nothing ever
+   assign tm_write_axis_data[2] = read_cmd;
+   assign tm_write_axis_tuser[2] = 1'b1;
+   assign tm_write_axis_valid[2] = 1'b1;
+   assign tm_write_axis_smallpile[2] = 1'b0;
+
+   assign history_axis_data = tm_read_axis_data[2];
+   assign tm_read_axis_ready[2] = history_axis_ready;
+   assign history_axis_tuser = tm_read_axis_tuser[2];
+   assign tm_read_axis_af[2] = history_axis_af;
+   assign history_axis_valid = tm_read_axis_valid[2];
+   
+   traffic_merger #(.CHANNEL_COUNT(3)) tg
      (.clk_in(ui_clk),
       .rst_in(sys_rst_ui),
       
@@ -520,6 +588,43 @@ module top_level
 
       
 
+   logic 	 iir_axis_valid;
+   logic 	 iir_axis_ready;
+   logic [127:0] iir_axis_data;
+   logic 	 iir_axis_tuser;
+   
+   ddr_fifo hdmi_read
+     (.s_axis_aresetn(~sys_rst_ui), // active low
+      .s_axis_aclk(ui_clk),
+      .s_axis_tvalid(history_axis_valid),
+      .s_axis_tready(history_axis_ready),
+      .s_axis_tdata(history_axis_data),
+      .s_axis_tuser(history_axis_tuser),
+      .prog_full(history_axis_af),
+      .m_axis_aclk(clk_camera),
+      .m_axis_tvalid(iir_axis_valid),
+      .m_axis_tready(iir_axis_ready), // ready will spit you data! use in proper state
+      .m_axis_tdata(iir_axis_data),
+      .m_axis_tuser(iir_axis_tuser));
+
+   logic 	 history_pixel_ready;
+   logic 	 history_pixel_valid;
+   logic 	 history_pixel_nf;
+
+   assign history_pixel_ready = valid_cc && (history_pixel_nf == newframe_cc);
+   
+   digest_phrase digest_iir
+     (.clk_in(clk_camera),
+      .rst_in(sys_rst_camera),
+      .valid_phrase(iir_axis_valid),
+      .ready_phrase(iir_axis_ready),
+      .phrase_data(iir_axis_data),
+      .phrase_tuser(iir_axis_tuser),
+      .valid_word(history_pixel_valid),
+      .ready_word(history_pixel_ready),
+      .newframe_out(history_pixel_nf),
+      .word(history_pixel));
+   
    // traffic_generator tg
    //   (.clk_in(ui_clk),
    //    .rst_in(sys_rst_ui),
@@ -561,7 +666,7 @@ module top_level
    logic [127:0] hdmi_axis_data;
    logic 	 hdmi_axis_tuser;
    
-   ddr_fifo hdmi_read
+   ddr_fifo iir_read
      (.s_axis_aresetn(~sys_rst_ui), // active low
       .s_axis_aclk(ui_clk),
       .s_axis_tvalid(read_axis_valid),
@@ -580,7 +685,7 @@ module top_level
    logic 	 hdmi_pixel_valid;
    logic 	 hdmi_pixel_nf;
 
-   digest_phrase
+   digest_phrase digest_hdmi
      (.clk_in(clk_pixel),
       .rst_in(sys_rst_pixel),
       .valid_phrase(hdmi_axis_valid),

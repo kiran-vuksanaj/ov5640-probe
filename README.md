@@ -20,6 +20,8 @@ When the script starts up, the HDMI output shows stripe-y patterns, the unmodifi
 
 Set `sw[2]` to 1'b0 (down) to referencce the ROM memory settings, and press `btn[1]` to program the camera.
 
+4. Configure Glow Trails
+Set `sw[15:8]` to change the threshold value for the glow trails IIR algorithm; turn `sw[3]` on or off to view a luminance mask on the camera input.
 
 ## Wiring Layout
 
@@ -37,6 +39,14 @@ sw[1:0] :: seven-segment display
 sw[2] :: mode for camera register writes
 * 1'b0 references the ROM initialized during synthesis
 * 1'b1 references the BRAM that can communicate over UART through Manta
+
+sw[3] :: glow trails display mode
+* 1'b0 sets default mode, displaying glow trails
+* 1'b1 displays a luminance mask on the camera input according to the currently set `threshold` value
+
+sw[15:8] :: glow trails threshold
+* a lower value causes longer trails, and more items unintentionally picked up. a higher value (closer to 255) reduces the trail effect. Turning all switches on (8'd255) results in default camera output.
+* depending on room lighting conditions, setting the threshold to about `8'hA0` can produce nice glow trails. Adjust the value for more precision.
 
 ### User-Defined Buttons
 * btn[0] : system reset

@@ -667,7 +667,7 @@ module top_level
    logic 	 hdmi_axis_tuser;
    
    ddr_fifo iir_read
-     (.sender_rst(~sys_rst_ui), // active low
+     (.sender_rst(sys_rst_ui), // active low
       .sender_clk(ui_clk),
       .sender_axis_tvalid(read_axis_valid),
       .sender_axis_tready(read_axis_ready),

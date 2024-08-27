@@ -459,18 +459,18 @@ module top_level
    logic 	 small_pile;
 
    ddr_fifo camera_write
-     (.s_axis_aresetn(~sys_rst_camera), // active low
-      .s_axis_aclk(clk_camera),
-      .s_axis_tvalid(phrase_axis_valid),
-      .s_axis_tready(phrase_axis_ready),
-      .s_axis_tdata(phrase_axis_data),
-      .s_axis_tuser(phrase_axis_tuser),
-      .m_axis_aclk(ui_clk),
-      .m_axis_tvalid(write_axis_valid),
-      .m_axis_tready(write_axis_ready), // ready will spit you data! use in proper state
-      .m_axis_tdata(write_axis_phrase),
-      .m_axis_tuser(write_axis_tuser),
-      .prog_empty(small_pile));
+     (.sender_rst(sys_rst_camera), // active low
+      .sender_clk(clk_camera),
+      .sender_axis_tvalid(phrase_axis_valid),
+      .sender_axis_tready(phrase_axis_ready),
+      .sender_axis_tdata(phrase_axis_data),
+      .sender_axis_tuser(phrase_axis_tuser),
+      .receiver_clk(ui_clk),
+      .receiver_axis_tvalid(write_axis_valid),
+      .receiver_axis_tready(write_axis_ready), // ready will spit you data! use in proper state
+      .receiver_axis_tdata(write_axis_phrase),
+      .receiver_axis_tuser(write_axis_tuser),
+      .receiver_axis_prog_empty(small_pile));
 
    // assign write_axis_ready = 1;
    // always_ff @(posedge ui_clk) begin
@@ -594,18 +594,18 @@ module top_level
    logic 	 iir_axis_tuser;
    
    ddr_fifo hdmi_read
-     (.s_axis_aresetn(~sys_rst_ui), // active low
-      .s_axis_aclk(ui_clk),
-      .s_axis_tvalid(history_axis_valid),
-      .s_axis_tready(history_axis_ready),
-      .s_axis_tdata(history_axis_data),
-      .s_axis_tuser(history_axis_tuser),
-      .prog_full(history_axis_af),
-      .m_axis_aclk(clk_camera),
-      .m_axis_tvalid(iir_axis_valid),
-      .m_axis_tready(iir_axis_ready), // ready will spit you data! use in proper state
-      .m_axis_tdata(iir_axis_data),
-      .m_axis_tuser(iir_axis_tuser));
+     (.sender_rst(sys_rst_ui), // active low
+      .sender_clk(ui_clk),
+      .sender_axis_tvalid(history_axis_valid),
+      .sender_axis_tready(history_axis_ready),
+      .sender_axis_tdata(history_axis_data),
+      .sender_axis_tuser(history_axis_tuser),
+      .sender_axis_prog_full(history_axis_af),
+      .receiver_clk(clk_camera),
+      .receiver_axis_tvalid(iir_axis_valid),
+      .receiver_axis_tready(iir_axis_ready), // ready will spit you data! use in proper state
+      .receiver_axis_tdata(iir_axis_data),
+      .receiver_axis_tuser(iir_axis_tuser));
 
    logic 	 history_pixel_ready;
    logic 	 history_pixel_valid;
@@ -667,18 +667,18 @@ module top_level
    logic 	 hdmi_axis_tuser;
    
    ddr_fifo iir_read
-     (.s_axis_aresetn(~sys_rst_ui), // active low
-      .s_axis_aclk(ui_clk),
-      .s_axis_tvalid(read_axis_valid),
-      .s_axis_tready(read_axis_ready),
-      .s_axis_tdata(read_axis_data),
-      .s_axis_tuser(read_axis_tuser),
-      .prog_full(read_axis_af),
-      .m_axis_aclk(clk_pixel),
-      .m_axis_tvalid(hdmi_axis_valid),
-      .m_axis_tready(hdmi_axis_ready), // ready will spit you data! use in proper state
-      .m_axis_tdata(hdmi_axis_data),
-      .m_axis_tuser(hdmi_axis_tuser));
+     (.sender_rst(~sys_rst_ui), // active low
+      .sender_clk(ui_clk),
+      .sender_axis_tvalid(read_axis_valid),
+      .sender_axis_tready(read_axis_ready),
+      .sender_axis_tdata(read_axis_data),
+      .sender_axis_tuser(read_axis_tuser),
+      .sender_axis_prog_full(read_axis_af),
+      .receiver_clk(clk_pixel),
+      .receiver_axis_tvalid(hdmi_axis_valid),
+      .receiver_axis_tready(hdmi_axis_ready), // ready will spit you data! use in proper state
+      .receiver_axis_tdata(hdmi_axis_data),
+      .receiver_axis_tuser(hdmi_axis_tuser));
 
    logic [15:0]  hdmi_pixel;
    logic 	 hdmi_pixel_ready;

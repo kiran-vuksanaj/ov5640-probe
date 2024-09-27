@@ -15,20 +15,36 @@ if {[llength $files] != 0} {
     puts "$outputDir is empty"
 }
 
-# read in all system veriilog files:
-read_verilog -sv [ glob ./hdl/*.sv ]
-# uncomment line below if verilog (.v) files present:
-read_verilog  [ glob ./hdl/*.v ]
+# read in all system verilog files:
+set sources_sv [ glob ./hdl/*.sv ]
+read_verilog -sv $sources_sv
+
+# read in all (if any) verilog files:
+set sources_v [ glob -nocomplain ./hdl/*.v ]
+if {[llength $sources_v] > 0 } {
+    read_verilog $sources_v
+}
+
+# read in constraint files:
 read_xdc [ glob ./xdc/*.xdc ]
-#we'll use this later:
-read_mem [ glob ./data/*.mem ]
+
+# read in all (if any) hex memory files:
+set sources_mem [ glob -nocomplain ./data/*.mem ]
+if {[llength $sources_mem] > 0} {
+    read_mem $sources_mem
+}
 
 # set the part number so Vivado knows how to build (each FPGA is different)
 set_part $partNum
 
-# Read in all IP
-read_ip ./ip/ddr3_mig/ddr3_mig.xci
-# read_ip ./ip/ddr_fifo/ddr_fifo.xci
+# Read in and synthesize all IP (first used in week 04!)
+set sources_ip [ glob -nocomplain -directory ./ip -tails * ]
+puts $sources_ip
+foreach ip_source $sources_ip {
+    if {[file isdirectory ./ip/$ip_source]} {
+	read_ip ./ip/$ip_source/$ip_source.xci
+    }
+}
 generate_target all [get_ips]
 synth_ip [get_ips]
 
